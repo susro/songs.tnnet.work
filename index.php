@@ -19,7 +19,7 @@ $songs = $stmt->fetchAll();
 <h1>My Song Book</h1>
 
 <?php if (empty($songs)): ?>
-    <p>まだ曲が登録されていません。</p>
+    <p>まだ曲が登録されていませんの。</p>
 <?php else: ?>
     <ul>
     <?php foreach ($songs as $row): ?>
