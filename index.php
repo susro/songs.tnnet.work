@@ -3,6 +3,7 @@ require_once 'config.php';
 
 $keyword = trim((string)($_GET['q'] ?? ''));
 $year = trim((string)($_GET['year'] ?? ''));
+$tag = trim((string)($_GET['tag'] ?? ''));
 
 $where = [];
 $params = [];
@@ -19,10 +20,17 @@ if ($year !== '' && ctype_digit($year)) {
 }
 
 $sql = "
-SELECT songs.*, artists.name AS artist_name
+SELECT DISTINCT songs.*, artists.name AS artist_name
 FROM songs
 LEFT JOIN artists ON songs.artist_id = artists.id
+LEFT JOIN artist_tags ON artists.id = artist_tags.artist_id
+LEFT JOIN tags ON artist_tags.tag_id = tags.id
 ";
+
+if ($tag !== '') {
+    $where[] = 'tags.name = ?';
+    $params[] = $tag;
+}
 
 if ($where) {
     $sql .= ' WHERE ' . implode(' AND ', $where);
@@ -46,6 +54,7 @@ $songs = $stmt->fetchAll();
 <form method="get" style="margin-bottom:16px;">
     <label>検索: <input type="text" name="q" value="<?= htmlspecialchars($keyword) ?>" placeholder="曲名／アーティスト"></label>
     <label>年: <input type="text" name="year" value="<?= htmlspecialchars($year) ?>" placeholder="例: 1995" style="width:80px;"></label>
+    <label>タグ: <input type="text" name="tag" value="<?= htmlspecialchars($tag) ?>" placeholder="ロック／J-POP" style="width:120px;"></label>
     <button type="submit">検索</button>
     <a href="index.php">クリア</a>
 </form>
@@ -58,7 +67,10 @@ $songs = $stmt->fetchAll();
 <?php if (!$songs): ?>
     <p>該当する曲が見つかりませんでした。</p>
 <?php else: ?>
-    <p>検索結果: <?= count($songs) ?> 件<?= $keyword || $year ? '（条件に一致）' : '（最新 100 件）' ?></p>
+    <p>検索結果: <?= count($songs) ?> 件<?= $keyword || $year || $tag ? '（条件に一致）' : '（最新 100 件）' ?></p>
+    <?php if ($tag !== ''): ?>
+        <p>絞り込み: タグ「<?= htmlspecialchars($tag) ?>」</p>
+    <?php endif; ?>
     <ul>
     <?php foreach ($songs as $row): ?>
         <li>
