@@ -1,0 +1,28 @@
+# Git 管理ファイル
+.git/
+.gitignore
+
+# GitHub Actions ワークフロー
+.github/
+
+# ローカル専用ファイル
+*.zip
+*.bak
+*.tmp
+*.log
+
+# OS / エディタのゴミ
+.DS_Store
+Thumbs.db
+
+# Composer の vendor（必要なら除外）
+# vendor/
+
+# Node 系（もし使っていれば）
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE 設定
+.vscode/
+.idea/
