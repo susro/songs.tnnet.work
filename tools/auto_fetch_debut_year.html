@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>自動デビュー年取得（JSON版）</title>
+    <style>
+        :root {
+            font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
+            color: #111
+        }
+
+        body {
+            margin: 16px;
+            background: #fff
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 12px
+        }
+
+        #controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap
+        }
+
+        label {
+            font-size: 13px;
+            color: #333
+        }
+
+        input[type=number] {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80px
+        }
+
+        button {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #2b6cb0;
+            background: #2b6cb0;
+            color: #fff;
+            cursor: pointer
+        }
+
+        button[disabled] {
+            opacity: .5;
+            cursor: default
+        }
+
+        #log {
+            white-space: pre-wrap;
+            background: #f7f7f7;
+            padding: 12px;
+            border: 1px solid #e1e1e1;
+            height: 60vh;
+            overflow: auto;
+            border-radius: 6px
+        }
+
+        .small {
+            font-size: 12px;
+            color: #666
+        }
+
+        .stats {
+            margin-top: 8px;
+            font-size: 13px
+        }
+
+        .bad {
+            color: #b00020
+        }
+
+        .ok {
+            color: #0a7a0a
+        }
+    </style>
+</head>
+
+<body>
+    <h1>自動デビュー年取得（JSON版）</h1>
+
+    <div id="controls">
+        <label>1回あたり処理件数:
+    <input id="limit" type="number" value="20" min="1" />
+  </label>
+
+        <label>間隔（秒）:
+    <input id="delay" type="number" value="2" min="0" />
+  </label>
+
+        <label class="small">最大失敗試行を超えた行は自動で除外されます</label>
+
+        <div style="margin-left:auto">
+            <button id="start">開始</button>
+            <button id="stop" disabled>停止</button>
+            <button id="clearFailed" title="クライアント側に保存した永久失敗IDをクリア">永久失敗クリア</button>
+        </div>
+    </div>
+
+    <div id="log">準備完了。開始ボタンを押してください。</div>
+
+    <div class="stats" id="stats"></div>
+
+    <script>
+        (function(){
+  const API = '/tools/fetch_debut_year_api.php';
+  const logEl = document.getElementById('log');
+  const startBtn = document.getElementById('start');
+  const stopBtn = document.getElementById('stop');
+  const clearBtn = document.getElementById('clearFailed');
+  const limitInput = document.getElementById('limit');
+  const delayInput = document.getElementById('delay');
+  const statsEl = document.getElementById('stats');
+
+  let running = false;
+  let timer = null;
+  let totalProcessed = 0;
+  let totalOk = 0;
+  let totalFailed = 0;
+  let totalPermanent = 0;
+
+  // 永久失敗IDをクライアント側に保持して無駄呼び出しをさらに減らす
+  const STORAGE_KEY = 'fetch_debut_year_permanent_failed_ids';
+  const permanentFailedIds = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+
+  function savePermanentFailed() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(permanentFailedIds)));
+  }
+
+  function appendLog(text, cls) {
+    const time = new Date().toLocaleTimeString();
+    logEl.textContent += `[${time}] ${text}\n`;
+    if (cls === 'error') {
+      // optional visual cue
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+    updateStats();
+  }
+
+  function updateStats() {
+    statsEl.innerHTML = `処理済み: <strong>${totalProcessed}</strong> &nbsp; 成功: <span class="ok">${totalOk}</span> &nbsp; 失敗: <span class="bad">${totalFailed}</span> &nbsp; 永久失敗(クライアント): ${permanentFailedIds.size}`;
+  }
+
+  async function fetchBatch(limit) {
+    const url = `${API}?limit=${encodeURIComponent(limit)}&_=${Date.now()}`;
+    try {
+      const res = await fetch(url, {cache: 'no-store'});
+      if (!res.ok) {
+        appendLog(`HTTP ${res.status} ${res.statusText}`, 'error');
+        return null;
+      }
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      appendLog('Fetch エラー: ' + e.message, 'error');
+      return null;
+    }
+  }
+
+  async function processOnce(limit) {
+    const data = await fetchBatch(limit);
+    if (!data) return {done:false, processed:0};
+
+    if (data.done) {
+      appendLog('サーバー: ' + (data.message || 'すべて処理済み'));
+      return {done:true, processed:0};
+    }
+
+    let processedCount = 0;
+    for (const row of data.processed) {
+      // サーバー側で既に永久失敗にしている行はクライアントでも記録
+      if (row.status === 'failed_permanent') {
+        permanentFailedIds.add(row.id);
+        savePermanentFailed();
+      }
+
+      // ログ出力（簡潔）
+      const id = row.id;
+      const name = row.name;
+      const status = row.status;
+      const year = row.year;
+      const attempts = row.attempts;
+
+      processedCount++;
+      totalProcessed++;
+
+      if (status === 'ok') {
+        totalOk++;
+        appendLog(`${id} | ${name} → ${year} （成功）`);
+      } else if (status === 'failed_permanent') {
+        totalPermanent++;
+        totalFailed++;
+        appendLog(`${id} | ${name} → 永久失敗に設定（試行 ${attempts} 回）`, 'error');
+      } else if (status === 'failed') {
+        totalFailed++;
+        appendLog(`${id} | ${name} → 失敗（試行 ${attempts} 回）`);
+      } else if (status === 'skipped_recent') {
+        appendLog(`${id} | ${name} → 最近試行済みのためスキップ（試行 ${attempts} 回）`);
+      } else {
+        appendLog(`${id} | ${name} → 不明なステータス: ${status}`);
+      }
+    }
+
+    return {done:false, processed:processedCount};
+  }
+
+  async function loop() {
+    const limit = Math.max(1, parseInt(limitInput.value || '20', 10));
+    const delaySec = Math.max(0, parseFloat(delayInput.value || '2'));
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    running = true;
+    appendLog('自動実行開始');
+
+    while (running) {
+      // もしクライアント側で永久失敗IDが増えすぎてサーバーに無駄なリクエストを送りたくない場合は短絡終了の判断を入れる（任意）
+      // ここでは常にリクエストを送るが、必要なら permanentFailedIds.size を閾値にして停止できる。
+
+      const result = await processOnce(limit);
+      if (!running) break;
+      if (result.done) break;
+      if (result.processed === 0) {
+        // サーバーが今回処理対象なしを返した場合は終了
+        appendLog('今回のバッチで処理対象なし。終了します。');
+        break;
+      }
+
+      // 待機（途中で停止可能）
+      await new Promise(resolve => {
+        let waited = 0;
+        const step = 200;
+        timer = setInterval(() => {
+          waited += step;
+          if (!running) {
+            clearInterval(timer);
+            timer = null;
+            resolve();
+            return;
+          }
+          if (waited >= delaySec * 1000) {
+            clearInterval(timer);
+            timer = null;
+            resolve();
+          }
+        }, step);
+      });
+    }
+
+    running = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    appendLog('自動実行終了');
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (running) return;
+    // リセット統計は任意。ここでは継続集計。
+    loop();
+  });
+
+  stopBtn.addEventListener('click', () => {
+    running = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    appendLog('停止指示を出しました。現在のリクエストが終わるまで待ちます。');
+  });
+
+  clearBtn.addEventListener('click', () => {
+    if (!confirm('クライアント側に保存した永久失敗IDをクリアしますか？')) return;
+    permanentFailedIds.clear();
+    savePermanentFailed();
+    appendLog('クライアント側の永久失敗IDをクリアしました。');
+    updateStats();
+  });
+
+  // 初期表示の統計
+  updateStats();
+
+  // 開発者向け：コンソールに永久失敗IDを表示
+  console.log('permanentFailedIds loaded:', Array.from(permanentFailedIds));
+})();
+    </script>
+</body>
+
+</html>
