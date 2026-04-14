@@ -98,8 +98,8 @@ $quickDecades = $decadeStmt->fetchAll();
 <body>
 <div class="container retro-home">
     <header class="hero-card">
-        <p class="hero-kicker">TN Karaoke Navigator</p>
-        <h1>My Song Book</h1>
+        <p class="hero-kicker">Songs.TNNET</p>
+        <h1>Songs.TNNET</h1>
         <p class="hero-lead">探す・選ぶを同じ画面で。スマホでも使いやすいトップへ更新中です。</p>
     </header>
 
