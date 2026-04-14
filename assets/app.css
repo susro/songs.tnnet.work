@@ -215,6 +215,18 @@ h1 {
   text-decoration: none;
 }
 
+.tag-filter {
+  cursor: pointer;
+  color: #e7ecff;
+  font-size: 0.9rem;
+}
+
+.tag-filter.is-active {
+  background: #66f3ff;
+  color: #091122;
+  border-color: #66f3ff;
+}
+
 .feature-tiles {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -252,6 +264,88 @@ h1 {
 
 .admin-panel {
   opacity: 0.94;
+}
+
+.select-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.select-tools button {
+  border: 1px solid #64f4ff;
+  border-radius: 8px;
+  background: #141635;
+  color: #dff7ff;
+  padding: 6px 10px;
+}
+
+.admin-list {
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid #323b74;
+  border-radius: 10px;
+  padding: 8px;
+  background: #141635;
+}
+
+.admin-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.admin-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid #31397a;
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(15, 18, 43, 0.78);
+}
+
+.admin-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fetch-badge {
+  font-size: 0.75rem;
+  border: 1px solid #76ffcf;
+  color: #76ffcf;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.fetch-badge-pending {
+  border-color: #ffb25f;
+  color: #ffb25f;
+}
+
+.admin-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 4px;
+  border-bottom: 1px solid #2a3164;
+}
+
+.admin-item:last-child {
+  border-bottom: none;
+}
+
+.admin-item small {
+  display: block;
+  color: #b6c4ef;
 }
 
 @media (max-width: 640px) {

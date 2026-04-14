@@ -72,6 +72,7 @@ $tagStmt = $pdo->query("
 SELECT t.name, COUNT(*) AS use_count
 FROM tags t
 JOIN artist_tags at ON at.tag_id = t.id
+WHERE t.name NOT REGEXP '^[0-9]{4}年代$'
 GROUP BY t.id, t.name
 ORDER BY use_count DESC, t.name ASC
 LIMIT 8
@@ -106,7 +107,6 @@ $quickDecades = $decadeStmt->fetchAll();
     <nav class="top-nav">
         <a href="index.php" class="is-active">トップ</a>
         <a href="artists.php">アーティスト一覧</a>
-        <a href="add.php">曲を追加</a>
     </nav>
 
     <section class="home-grid">
@@ -172,8 +172,8 @@ $quickDecades = $decadeStmt->fetchAll();
         <h2>管理モード</h2>
         <p class="panel-note">登録・メンテナンス系の導線です（使用モードと分離）。</p>
         <p>
-            <a href="add.php">曲を追加</a> /
-            <a href="artists.php">アーティスト管理</a>
+            <a href="admin.php">管理ホームへ</a> /
+            <a href="add.php">曲を追加</a>
         </p>
     </section>
 
