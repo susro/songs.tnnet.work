@@ -110,6 +110,20 @@ foreach ($artists as $artist) {
 }
 $allTags = array_keys($allTags);
 sort($allTags, SORT_NATURAL);
+$tagGroups = [
+    '年代タグ' => [],
+    'ジャンルタグ' => [],
+    'その他' => [],
+];
+foreach ($allTags as $tagName) {
+    if (preg_match('/^[0-9]{4}年代$/u', $tagName)) {
+        $tagGroups['年代タグ'][] = $tagName;
+    } elseif (preg_match('/(ロック|ポップ|アニソン|ボカロ|アイドル|ジャズ|クラシック|R&B|HIPHOP|V系|系)$/u', $tagName)) {
+        $tagGroups['ジャンルタグ'][] = $tagName;
+    } else {
+        $tagGroups['その他'][] = $tagName;
+    }
+}
 
 if ($runFetch) {
     if (!$selectedArtistIds) {
@@ -165,19 +179,33 @@ if ($runAddArtist) {
 
         <div class="search-form">
             <label>アーティスト検索: <input type="text" id="artist-filter-input" value="<?= htmlspecialchars($keyword) ?>" placeholder="アーティスト名"></label>
-            <button type="button" id="open-add-artist-modal">未登録アーティストを追加</button>
             <a class="link-button" href="admin.php">クリア</a>
+        </div>
+
+        <div class="theme-switch">
+            <span>テーマ:</span>
+            <button type="button" class="theme-btn is-active" data-theme="theme-neon">ネオン</button>
+            <button type="button" class="theme-btn" data-theme="theme-sunset">サンセット</button>
+            <button type="button" class="theme-btn" data-theme="theme-mint">ミント</button>
         </div>
 
         <div class="active-filters">
             <span>タグで絞り込み:</span>
             <button type="button" class="chip action-chip tag-filter is-active" data-tag="">すべて</button>
-            <?php foreach ($allTags as $tagName): ?>
-                <button type="button" class="chip action-chip tag-filter" data-tag="<?= htmlspecialchars($tagName) ?>">
-                    <?= htmlspecialchars($tagName) ?>
-                </button>
-            <?php endforeach; ?>
         </div>
+        <?php foreach ($tagGroups as $groupName => $tags): ?>
+            <?php if (!$tags) continue; ?>
+            <div class="tag-group">
+                <p class="panel-note tag-group-title"><?= htmlspecialchars($groupName) ?></p>
+                <div class="quick-chip-grid">
+                    <?php foreach ($tags as $tagName): ?>
+                        <button type="button" class="chip action-chip tag-filter jelly-chip" data-tag="<?= htmlspecialchars($tagName) ?>">
+                            <?= htmlspecialchars($tagName) ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
 
         <?php if ($errorMessage !== ''): ?>
             <div class="error-box"><p class="error-text"><?= htmlspecialchars($errorMessage) ?></p></div>
@@ -192,6 +220,9 @@ if ($runAddArtist) {
             <div class="select-tools">
                 <button type="button" id="toggle-visible-selection">表示中を選択</button>
                 <button type="submit" class="launch-button">まとめて楽曲Get！</button>
+            </div>
+            <div class="admin-side-tools">
+                <button type="button" id="open-add-artist-modal">未登録アーティストを追加</button>
             </div>
 
             <p class="result-meta">
@@ -209,10 +240,8 @@ if ($runAddArtist) {
                         <div class="admin-card-body">
                             <div class="admin-card-header">
                                 <strong><?= htmlspecialchars($artist['name']) ?></strong>
-                                <?php if (!empty($artist['last_fetch_at'])): ?>
-                                    <span class="fetch-badge">Fetch済み</span>
-                                <?php else: ?>
-                                    <span class="fetch-badge fetch-badge-pending">未Fetch</span>
+                                <?php if (empty($artist['last_fetch_at'])): ?>
+                                    <span class="fetch-badge fetch-badge-pending">未Get</span>
                                 <?php endif; ?>
                             </div>
                             <?php if (!empty($artist['tags'])): ?>
@@ -220,7 +249,7 @@ if ($runAddArtist) {
                             <?php else: ?>
                                 <small>タグ: なし</small>
                             <?php endif; ?>
-                            <small>最終Fetch: <?= !empty($artist['last_fetch_at']) ? htmlspecialchars((string)$artist['last_fetch_at']) : '未実行' ?></small>
+                            <small>最終採集日: <?= !empty($artist['last_fetch_at']) ? htmlspecialchars(substr((string)$artist['last_fetch_at'], 0, 10)) : '未実行' ?></small>
                         </div>
                     </label>
                 <?php endforeach; ?>
@@ -391,6 +420,22 @@ document.getElementById('open-add-artist-modal').addEventListener('click', funct
 });
 document.getElementById('close-add-artist-modal').addEventListener('click', function () {
   addArtistDialog.close();
+});
+document.querySelectorAll('.theme-btn').forEach(function (button) {
+  button.addEventListener('click', function () {
+    var theme = button.dataset.theme;
+    document.body.classList.remove('theme-neon', 'theme-sunset', 'theme-mint');
+    document.body.classList.add(theme);
+    localStorage.setItem('songsTheme', theme);
+    document.querySelectorAll('.theme-btn').forEach(function (b) { b.classList.remove('is-active'); });
+    button.classList.add('is-active');
+  });
+});
+var savedTheme = localStorage.getItem('songsTheme') || 'theme-neon';
+document.body.classList.remove('theme-neon', 'theme-sunset', 'theme-mint');
+document.body.classList.add(savedTheme);
+document.querySelectorAll('.theme-btn').forEach(function (button) {
+  button.classList.toggle('is-active', button.dataset.theme === savedTheme);
 });
 syncCardState();
 syncSelectedInputs();
