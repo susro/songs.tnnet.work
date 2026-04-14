@@ -96,5 +96,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit">登録</button>
     </form>
 </div>
+<script>
+(function () {
+  var theme = localStorage.getItem('songsTheme');
+  if (!theme) return;
+  document.body.classList.remove('theme-cream-a', 'theme-cream-b', 'theme-cream-c');
+  document.body.classList.add(theme);
+})();
+</script>
 </body>
 </html>
