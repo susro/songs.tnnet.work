@@ -96,11 +96,29 @@ h1 {
 
 .error-text {
   color: #b00020;
+  margin: 4px 0;
 }
 
 .result-meta {
   color: #3c455c;
   margin: 10px 0;
+}
+
+.error-box,
+.success-box {
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.error-box {
+  background: #fdecef;
+  border: 1px solid #f4c9d1;
+}
+
+.success-box {
+  background: #ecf8ef;
+  border: 1px solid #c8ebd2;
 }
 
 .table-wrap {
