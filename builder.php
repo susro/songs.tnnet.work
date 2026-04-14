@@ -229,7 +229,10 @@ if ($runAddArtist) {
             <a class="link-button" href="builder.php">クリア</a>
         </div>
 
-        <div class="active-filters"></div>
+        <div class="active-filters" id="active-filters">
+            <span id="active-filters-label">絞り込み中:</span>
+            <button type="button" class="chip action-chip" id="clear-tag-filters">タグをクリア</button>
+        </div>
         <div class="tag-groups-grid">
             <?php foreach ($tagGroups as $tags): ?>
                 <?php if (!$tags) continue; ?>
@@ -365,6 +368,8 @@ if ($runAddArtist) {
 <script>
 var selectedTags = new Set(<?= json_encode(array_values($selectedTagsInitial), JSON_UNESCAPED_UNICODE) ?>);
 var selectedArtistIds = new Set([<?= implode(',', array_map('intval', $selectedArtistIds)) ?>]);
+var activeFilters = document.getElementById('active-filters');
+var toggleVisibleSelectionButton = document.getElementById('toggle-visible-selection');
 
 function syncSelectedInputs() {
   var box = document.getElementById('selected-artist-inputs');
@@ -390,6 +395,60 @@ function syncCardState() {
   });
 }
 
+function updateToggleVisibleButton() {
+  var visibleCards = Array.from(document.querySelectorAll('.admin-card')).filter(function (card) {
+    return card.style.display !== 'none';
+  });
+  var allVisibleSelected = visibleCards.length > 0 && visibleCards.every(function (card) {
+    return selectedArtistIds.has(Number(card.dataset.artistId || 0));
+  });
+  toggleVisibleSelectionButton.textContent = allVisibleSelected ? '表示中を解除' : '表示中を選択';
+}
+
+function renderActiveFilters() {
+  var keyword = document.getElementById('artist-filter-input').value.trim();
+  var tags = Array.from(selectedTags);
+  activeFilters.innerHTML = '';
+  if (keyword === '' && tags.length === 0) {
+    activeFilters.hidden = true;
+    return;
+  }
+
+  activeFilters.hidden = false;
+  var baseLabel = document.createElement('span');
+  baseLabel.textContent = '絞り込み中:';
+  activeFilters.appendChild(baseLabel);
+
+  if (keyword !== '') {
+    var keywordChip = document.createElement('span');
+    keywordChip.className = 'chip';
+    keywordChip.textContent = '名前: ' + keyword;
+    activeFilters.appendChild(keywordChip);
+  }
+
+  tags.forEach(function (tag) {
+    var chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = tag;
+    activeFilters.appendChild(chip);
+  });
+
+  var clearButton = document.createElement('button');
+  clearButton.type = 'button';
+  clearButton.className = 'chip action-chip';
+  clearButton.textContent = 'タグをクリア';
+  clearButton.disabled = tags.length === 0;
+  clearButton.addEventListener('click', function () {
+    selectedTags.clear();
+    document.querySelectorAll('.tag-filter.is-active').forEach(function (tagButton) {
+      tagButton.classList.remove('is-active');
+    });
+    applyArtistFilters();
+    syncSelectedInputs();
+  });
+  activeFilters.appendChild(clearButton);
+}
+
 function toggleVisibleSelectionByState(selectVisible) {
   document.querySelectorAll('.admin-card').forEach(function (card) {
     if (card.style.display === 'none') return;
@@ -403,6 +462,7 @@ function toggleVisibleSelectionByState(selectVisible) {
   });
   syncCardState();
   syncSelectedInputs();
+  updateToggleVisibleButton();
 }
 
 function normalizeText(value) {
@@ -430,6 +490,8 @@ function applyArtistFilters() {
     if (show) visible++;
   });
   document.getElementById('visible-count').textContent = String(visible);
+  renderActiveFilters();
+  updateToggleVisibleButton();
   window.scrollTo(0, prevScrollY);
 }
 
@@ -448,7 +510,7 @@ document.querySelectorAll('.admin-card').forEach(function (card) {
   });
 });
 
-document.getElementById('toggle-visible-selection').addEventListener('click', function () {
+toggleVisibleSelectionButton.addEventListener('click', function () {
   var visibleCards = Array.from(document.querySelectorAll('.admin-card')).filter(function (card) {
     return card.style.display !== 'none';
   });
@@ -456,7 +518,6 @@ document.getElementById('toggle-visible-selection').addEventListener('click', fu
     return selectedArtistIds.has(Number(card.dataset.artistId || 0));
   });
   toggleVisibleSelectionByState(!allVisibleSelected);
-  this.textContent = allVisibleSelected ? '表示中を選択' : '表示中を解除';
 });
 
 document.getElementById('bulk-get-form').addEventListener('submit', function () {
