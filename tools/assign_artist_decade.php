@@ -23,12 +23,9 @@ foreach ($artists as $a) {
 
     $tag_id = getOrCreateTag($pdo, $tag_name, 'artist');
 
-    // 重複チェック
-    $stmt2 = $pdo->prepare("SELECT COUNT(*) FROM artist_tags WHERE artist_id=? AND tag_id=?");
+    $stmt2 = $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id, tag_id) VALUES (?, ?)");
     $stmt2->execute([$a['id'], $tag_id]);
-    if ($stmt2->fetchColumn() == 0) {
-        $stmt3 = $pdo->prepare("INSERT INTO artist_tags (artist_id, tag_id) VALUES (?, ?)");
-        $stmt3->execute([$a['id'], $tag_id]);
+    if ($stmt2->rowCount() > 0) {
         echo "年代タグ付与: Artist {$a['id']} → {$tag_name}<br>";
     }
 }

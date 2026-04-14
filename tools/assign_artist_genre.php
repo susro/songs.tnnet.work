@@ -7,11 +7,9 @@ function addTag($pdo, $artist_id, $tag_name) {
     $tag_id = $stmt->fetchColumn();
     if (!$tag_id) return;
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM artist_tags WHERE artist_id=? AND tag_id=?");
+    $stmt = $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id, tag_id) VALUES (?, ?)");
     $stmt->execute([$artist_id, $tag_id]);
-    if ($stmt->fetchColumn() == 0) {
-        $stmt = $pdo->prepare("INSERT INTO artist_tags (artist_id, tag_id) VALUES (?, ?)");
-        $stmt->execute([$artist_id, $tag_id]);
+    if ($stmt->rowCount() > 0) {
         echo "ジャンルタグ付与: Artist {$artist_id} → {$tag_name}<br>";
     }
 }
