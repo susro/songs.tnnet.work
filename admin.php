@@ -3,9 +3,12 @@ require_once 'config.php';
 
 $keyword = trim((string)($_GET['q'] ?? ''));
 $selectedArtistIds = array_map('intval', $_POST['artist_ids'] ?? []);
-$runFetch = $_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'bulk_fetch');
+$action = (string)($_POST['action'] ?? '');
+$runFetch = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'bulk_fetch';
+$runAddArtist = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_artist';
 $results = [];
 $errorMessage = '';
+$successMessage = '';
 
 function fetchSongsForArtist(PDO $pdo, int $artistId): array {
     $stmt = $pdo->prepare("SELECT name FROM artists WHERE id = ?");
@@ -117,30 +120,52 @@ if ($runFetch) {
         }
     }
 }
+
+if ($runAddArtist) {
+    $newArtistName = trim((string)($_POST['new_artist_name'] ?? ''));
+    if ($newArtistName === '') {
+        $errorMessage = '追加するアーティスト名を入力してください。';
+    } else {
+        $existsStmt = $pdo->prepare("SELECT id FROM artists WHERE name = ?");
+        $existsStmt->execute([$newArtistName]);
+        $existsId = (int)$existsStmt->fetchColumn();
+        if ($existsId > 0) {
+            $successMessage = 'すでに登録済みのアーティストです。';
+        } else {
+            $insertStmt = $pdo->prepare("INSERT INTO artists (name) VALUES (?)");
+            $insertStmt->execute([$newArtistName]);
+            $successMessage = 'アーティストを追加しました。';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $artists = $stmt->fetchAll();
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>管理モード</title>
+    <title>曲を増やす！</title>
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
 <div class="container">
-    <h1>管理モード</h1>
+    <h1>曲を増やす！</h1>
     <nav class="top-nav">
         <a href="index.php">トップ</a>
         <a href="artists.php">アーティスト一覧</a>
-        <a href="admin.php" class="is-active">管理モード</a>
+        <a href="admin.php" class="is-active">曲を増やす！</a>
     </nav>
 
     <section class="panel-card">
-        <h2>一括取得（Fetch）</h2>
+        <h2>まとめて楽曲Get！</h2>
         <p class="panel-note">タグ複数選択 + テキスト検索でリアルタイムに絞り込み、マトリクスで選択できます。</p>
 
         <div class="search-form">
             <label>アーティスト検索: <input type="text" id="artist-filter-input" value="<?= htmlspecialchars($keyword) ?>" placeholder="アーティスト名"></label>
+            <button type="button" id="open-add-artist-modal">未登録アーティストを追加</button>
             <a class="link-button" href="admin.php">クリア</a>
         </div>
 
@@ -157,26 +182,30 @@ if ($runFetch) {
         <?php if ($errorMessage !== ''): ?>
             <div class="error-box"><p class="error-text"><?= htmlspecialchars($errorMessage) ?></p></div>
         <?php endif; ?>
+        <?php if ($successMessage !== ''): ?>
+            <div class="success-box"><p><?= htmlspecialchars($successMessage) ?></p></div>
+        <?php endif; ?>
 
-        <form method="post">
+        <form method="post" id="bulk-get-form">
             <input type="hidden" name="action" value="bulk_fetch">
+            <div id="selected-artist-inputs"></div>
             <div class="select-tools">
-                <button type="button" onclick="toggleArtistSelection(true)">全選択</button>
-                <button type="button" onclick="toggleArtistSelection(false)">全解除</button>
-                <button type="button" onclick="toggleVisibleSelection(true)">表示中を選択</button>
-                <button type="button" onclick="toggleVisibleSelection(false)">表示中を解除</button>
-                <button type="submit">選択アーティストで一括Fetch</button>
+                <button type="button" id="toggle-visible-selection">表示中を選択</button>
+                <button type="submit" class="launch-button">まとめて楽曲Get！</button>
             </div>
 
-            <p class="result-meta">対象: <span id="visible-count"><?= count($artists) ?></span> / <?= count($artists) ?> 件（最大 300 件表示）</p>
+            <p class="result-meta">
+                対象: <span id="visible-count"><?= count($artists) ?></span> / <?= count($artists) ?> 件（最大 300 件表示）
+                ・選択中: <span id="selected-count"><?= count($selectedArtistIds) ?></span> 件
+            </p>
             <div class="admin-matrix" id="admin-matrix">
                 <?php foreach ($artists as $artist): ?>
                     <?php $tagList = !empty($artist['tags']) ? explode(' / ', $artist['tags']) : []; ?>
                     <label class="admin-card"
+                           data-artist-id="<?= (int)$artist['id'] ?>"
                            data-name="<?= htmlspecialchars(strtolower($artist['name']), ENT_QUOTES, 'UTF-8') ?>"
-                           data-tags="<?= htmlspecialchars(implode('|', $tagList), ENT_QUOTES, 'UTF-8') ?>">
-                        <input type="checkbox" class="artist-checkbox" name="artist_ids[]" value="<?= (int)$artist['id'] ?>"
-                            <?= in_array((int)$artist['id'], $selectedArtistIds, true) ? 'checked' : '' ?>>
+                           data-tags="<?= htmlspecialchars(implode('|', $tagList), ENT_QUOTES, 'UTF-8') ?>"
+                           data-selected="<?= in_array((int)$artist['id'], $selectedArtistIds, true) ? '1' : '0' ?>">
                         <div class="admin-card-body">
                             <div class="admin-card-header">
                                 <strong><?= htmlspecialchars($artist['name']) ?></strong>
@@ -227,21 +256,59 @@ if ($runFetch) {
         </section>
     <?php endif; ?>
 </div>
+
+<dialog id="add-artist-dialog" class="add-artist-dialog">
+    <form method="post" class="panel-card">
+        <input type="hidden" name="action" value="add_artist">
+        <h2>未登録アーティストを追加</h2>
+        <p class="panel-note">まずは名前だけ登録します。必要なら後で別名やタグを追加できます。</p>
+        <label>アーティスト名: <input type="text" name="new_artist_name" required></label>
+        <div class="select-tools">
+            <button type="submit">追加する</button>
+            <button type="button" id="close-add-artist-modal">閉じる</button>
+        </div>
+    </form>
+</dialog>
+
 <script>
 var selectedTags = new Set();
+var selectedArtistIds = new Set([<?= implode(',', array_map('intval', $selectedArtistIds)) ?>]);
 
-function toggleArtistSelection(checked) {
-  document.querySelectorAll('.artist-checkbox').forEach(function (el) {
-    el.checked = checked;
+function syncSelectedInputs() {
+  var box = document.getElementById('selected-artist-inputs');
+  box.innerHTML = '';
+  Array.from(selectedArtistIds).forEach(function (id) {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'artist_ids[]';
+    input.value = String(id);
+    box.appendChild(input);
+  });
+  document.getElementById('selected-count').textContent = String(selectedArtistIds.size);
+}
+
+function syncCardState() {
+  document.querySelectorAll('.admin-card').forEach(function (card) {
+    var id = Number(card.dataset.artistId || 0);
+    var selected = selectedArtistIds.has(id);
+    card.classList.toggle('is-selected', selected);
+    card.dataset.selected = selected ? '1' : '0';
   });
 }
 
-function toggleVisibleSelection(checked) {
+function toggleVisibleSelectionByState(selectVisible) {
   document.querySelectorAll('.admin-card').forEach(function (card) {
     if (card.style.display === 'none') return;
-    var box = card.querySelector('.artist-checkbox');
-    if (box) box.checked = checked;
+    var id = Number(card.dataset.artistId || 0);
+    if (!id) return;
+    if (selectVisible) {
+      selectedArtistIds.add(id);
+    } else {
+      selectedArtistIds.delete(id);
+    }
   });
+  syncCardState();
+  syncSelectedInputs();
 }
 
 function normalizeText(value) {
@@ -262,6 +329,36 @@ function applyArtistFilters() {
   });
   document.getElementById('visible-count').textContent = String(visible);
 }
+
+document.querySelectorAll('.admin-card').forEach(function (card) {
+  card.addEventListener('click', function (event) {
+    event.preventDefault();
+    var id = Number(card.dataset.artistId || 0);
+    if (!id) return;
+    if (selectedArtistIds.has(id)) {
+      selectedArtistIds.delete(id);
+    } else {
+      selectedArtistIds.add(id);
+    }
+    syncCardState();
+    syncSelectedInputs();
+  });
+});
+
+document.getElementById('toggle-visible-selection').addEventListener('click', function () {
+  var visibleCards = Array.from(document.querySelectorAll('.admin-card')).filter(function (card) {
+    return card.style.display !== 'none';
+  });
+  var allVisibleSelected = visibleCards.length > 0 && visibleCards.every(function (card) {
+    return selectedArtistIds.has(Number(card.dataset.artistId || 0));
+  });
+  toggleVisibleSelectionByState(!allVisibleSelected);
+  this.textContent = allVisibleSelected ? '表示中を選択' : '表示中を解除';
+});
+
+document.getElementById('bulk-get-form').addEventListener('submit', function () {
+  syncSelectedInputs();
+});
 
 document.getElementById('artist-filter-input').addEventListener('input', applyArtistFilters);
 document.querySelectorAll('.tag-filter').forEach(function (button) {
@@ -288,6 +385,15 @@ document.querySelectorAll('.tag-filter').forEach(function (button) {
     applyArtistFilters();
   });
 });
+var addArtistDialog = document.getElementById('add-artist-dialog');
+document.getElementById('open-add-artist-modal').addEventListener('click', function () {
+  addArtistDialog.showModal();
+});
+document.getElementById('close-add-artist-modal').addEventListener('click', function () {
+  addArtistDialog.close();
+});
+syncCardState();
+syncSelectedInputs();
 applyArtistFilters();
 </script>
 </body>
