@@ -10,6 +10,8 @@ $runAddArtist = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_artist
 $results = [];
 $errorMessage = '';
 $successMessage = '';
+$modalMessage = '';
+$modalMessageType = '';
 
 function fetchSongsForArtist(PDO $pdo, int $artistId): array {
     $stmt = $pdo->prepare("SELECT name FROM artists WHERE id = ?");
@@ -110,17 +112,17 @@ $buildTagGroups = function (array $artists): array {
     $allTags = array_keys($allTags);
     sort($allTags, SORT_NATURAL);
     $tagGroups = [
-        '年代タグ' => [],
-        'ジャンルタグ' => [],
-        'その他' => ['タグなし', '年代タグなし', 'ジャンルタグなし'],
+        'decade' => ['年代タグなし'],
+        'genre' => ['ジャンルタグなし'],
+        'other' => ['タグなし'],
     ];
     foreach ($allTags as $tagName) {
         if (preg_match('/^[0-9]{4}年代$/u', $tagName)) {
-            $tagGroups['年代タグ'][] = $tagName;
+            $tagGroups['decade'][] = $tagName;
         } elseif (preg_match('/(ロック|ポップ|アニソン|ボカロ|アイドル|ジャズ|クラシック|R&B|HIPHOP|V系|系)$/u', $tagName)) {
-            $tagGroups['ジャンルタグ'][] = $tagName;
+            $tagGroups['genre'][] = $tagName;
         } else {
-            $tagGroups['その他'][] = $tagName;
+            $tagGroups['other'][] = $tagName;
         }
     }
     return $tagGroups;
@@ -154,13 +156,15 @@ if ($runAddArtist) {
     $newArtistName = trim((string)($_POST['new_artist_name'] ?? ''));
     $confirmVariant = (string)($_POST['confirm_variant'] ?? '') === '1';
     if ($newArtistName === '') {
-        $errorMessage = '追加するアーティスト名を入力してください。';
+        $modalMessage = '追加するアーティスト名を入力してください。';
+        $modalMessageType = 'error';
     } else {
         $existsStmt = $pdo->prepare("SELECT id FROM artists WHERE name = ?");
         $existsStmt->execute([$newArtistName]);
         $existsId = (int)$existsStmt->fetchColumn();
         if ($existsId > 0) {
-            $successMessage = 'すでに登録済みのアーティストです。';
+            $modalMessage = 'すでに登録済みのアーティストです。';
+            $modalMessageType = 'info';
         } else {
             $suggestUrl = "https://itunes.apple.com/search?term=" . urlencode($newArtistName) . "&country=jp&entity=musicArtist&limit=1";
             $suggestJson = json_decode((string)@file_get_contents($suggestUrl), true);
@@ -169,14 +173,16 @@ if ($runAddArtist) {
                 $existsSuggestStmt = $pdo->prepare("SELECT id FROM artists WHERE name = ?");
                 $existsSuggestStmt->execute([$suggestedName]);
                 if ((int)$existsSuggestStmt->fetchColumn() > 0) {
-                    $errorMessage = "既存の候補「{$suggestedName}」があります。同一人物なら確認チェックを付けて追加してください。";
+                    $modalMessage = "既存の候補「{$suggestedName}」があります。このアーティストなら確認にチェックしてください。";
+                    $modalMessageType = 'error';
                 }
             }
         }
-        if ($errorMessage === '' && $existsId === 0) {
+        if ($modalMessage === '' && $existsId === 0) {
             $insertStmt = $pdo->prepare("INSERT INTO artists (name) VALUES (?)");
             $insertStmt->execute([$newArtistName]);
-            $successMessage = $newArtistName . ' を追加しました。';
+            $modalMessage = $newArtistName . ' を追加しました。';
+            $modalMessageType = 'success';
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $artists = $stmt->fetchAll();
@@ -199,9 +205,14 @@ if ($runAddArtist) {
         <h1>曲を増やす！</h1>
         <div class="theme-switch">
             <span>テーマ:</span>
-            <button type="button" class="theme-btn is-active" data-theme="theme-cream-a">クリームA</button>
-            <button type="button" class="theme-btn" data-theme="theme-cream-b">クリームB</button>
-            <button type="button" class="theme-btn" data-theme="theme-cream-c">クリームC</button>
+            <select id="theme-select" class="theme-select">
+                <option value="theme-neon">ネオン</option>
+                <option value="theme-sunset">サンセット</option>
+                <option value="theme-mint">ミント</option>
+                <option value="theme-cream-a">クリームA</option>
+                <option value="theme-cream-b">クリームB</option>
+                <option value="theme-cream-c">クリームC</option>
+            </select>
         </div>
     </div>
     <nav class="top-nav">
@@ -214,18 +225,15 @@ if ($runAddArtist) {
         <h2>まとめて楽曲Get！</h2>
 
         <div class="search-form">
-            <label>アーティスト検索: <input type="text" id="artist-filter-input" value="<?= htmlspecialchars($keyword) ?>" placeholder="アーティスト名"></label>
+            <input type="text" id="artist-filter-input" value="<?= htmlspecialchars($keyword) ?>" placeholder="アーティスト名で絞り込み">
             <a class="link-button" href="builder.php">クリア</a>
         </div>
 
-        <div class="active-filters">
-            <span>タグで絞り込み:</span>
-        </div>
+        <div class="active-filters"></div>
         <div class="tag-groups-grid">
-            <?php foreach ($tagGroups as $groupName => $tags): ?>
+            <?php foreach ($tagGroups as $tags): ?>
                 <?php if (!$tags) continue; ?>
                 <div class="tag-group">
-                    <p class="panel-note tag-group-title"><?= htmlspecialchars($groupName) ?></p>
                     <div class="quick-chip-grid">
                         <?php foreach ($tags as $tagName): ?>
                             <button type="button" class="chip action-chip tag-filter jelly-chip" data-tag="<?= htmlspecialchars($tagName) ?>">
@@ -236,13 +244,6 @@ if ($runAddArtist) {
                 </div>
             <?php endforeach; ?>
         </div>
-
-        <?php if ($errorMessage !== ''): ?>
-            <div class="error-box"><p class="error-text"><?= htmlspecialchars($errorMessage) ?></p></div>
-        <?php endif; ?>
-        <?php if ($successMessage !== ''): ?>
-            <div class="success-box"><p><?= htmlspecialchars($successMessage) ?></p></div>
-        <?php endif; ?>
 
         <form method="post" id="bulk-get-form">
             <input type="hidden" name="action" value="bulk_fetch">
@@ -332,6 +333,16 @@ if ($runAddArtist) {
             <button type="button" id="close-add-artist-modal">閉じる</button>
         </div>
     </form>
+</dialog>
+
+<dialog id="add-artist-result-dialog" class="add-artist-dialog">
+    <div class="panel-card">
+        <h2>アーティスト追加</h2>
+        <p id="add-artist-result-text"></p>
+        <div class="select-tools">
+            <button type="button" id="close-add-artist-result">OK</button>
+        </div>
+    </div>
 </dialog>
 
 <dialog id="fetch-result-dialog" class="add-artist-dialog">
@@ -487,31 +498,34 @@ if (closeFetchResult) {
     fetchResultDialog.close();
   });
 }
-document.querySelectorAll('.theme-btn').forEach(function (button) {
-  button.addEventListener('click', function () {
-    var theme = button.dataset.theme;
-    document.body.classList.remove('theme-cream-a', 'theme-cream-b', 'theme-cream-c');
-    document.body.classList.add(theme);
-    localStorage.setItem('songsTheme', theme);
-    document.querySelectorAll('.theme-btn').forEach(function (b) { b.classList.remove('is-active'); });
-    button.classList.add('is-active');
-  });
+var themeSelect = document.getElementById('theme-select');
+themeSelect.addEventListener('change', function () {
+  var theme = themeSelect.value;
+  document.body.classList.remove('theme-neon', 'theme-sunset', 'theme-mint', 'theme-cream-a', 'theme-cream-b', 'theme-cream-c');
+  document.body.classList.add(theme);
+  localStorage.setItem('songsTheme', theme);
 });
-var savedTheme = localStorage.getItem('songsTheme') || 'theme-cream-a';
-document.body.classList.remove('theme-cream-a', 'theme-cream-b', 'theme-cream-c');
+var savedTheme = localStorage.getItem('songsTheme') || 'theme-neon';
+document.body.classList.remove('theme-neon', 'theme-sunset', 'theme-mint', 'theme-cream-a', 'theme-cream-b', 'theme-cream-c');
 document.body.classList.add(savedTheme);
-document.querySelectorAll('.theme-btn').forEach(function (button) {
-  button.classList.toggle('is-active', button.dataset.theme === savedTheme);
-});
+themeSelect.value = savedTheme;
 syncCardState();
 syncSelectedInputs();
 document.getElementById('loading-overlay').hidden = true;
 applyArtistFilters();
+<?php if ($runAddArtist && $modalMessage !== ''): ?>
+addArtistDialog.close();
+document.getElementById('add-artist-result-text').textContent = "<?= htmlspecialchars($modalMessage, ENT_QUOTES, 'UTF-8') ?>";
+document.getElementById('add-artist-result-dialog').showModal();
+<?php endif; ?>
 <?php if ($runFetch): ?>
 document.getElementById('loading-overlay').hidden = true;
 document.getElementById('fetch-result-summary').textContent = "<?= count($results) ?>アーティストで <?= (int)$totalInserted ?>曲 を取り込みました！";
 fetchResultDialog.showModal();
 <?php endif; ?>
+document.getElementById('close-add-artist-result').addEventListener('click', function () {
+  document.getElementById('add-artist-result-dialog').close();
+});
 </script>
 </body>
 </html>

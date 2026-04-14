@@ -102,12 +102,14 @@ $quickDecades = $decadeStmt->fetchAll();
         <p class="hero-kicker">Songs.TNNET</p>
         <h1>Songs.TNNET</h1>
         <p class="hero-lead">探す・選ぶを同じ画面で。スマホでも使いやすいトップへ更新中です。</p>
+        <div class="hero-actions">
+            <a href="builder.php" class="launch-button top-launch-link">楽曲一括Get！</a>
+        </div>
     </header>
 
     <nav class="top-nav">
         <a href="index.php" class="is-active">トップ</a>
         <a href="artists.php">アーティスト一覧</a>
-        <a href="builder.php" class="launch-button top-launch-link">楽曲一括Get！</a>
     </nav>
 
     <section class="home-grid">
