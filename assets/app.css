@@ -1,0 +1,145 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f7f8fb;
+  color: #1f2430;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 16px 36px;
+}
+
+h1 {
+  margin: 0 0 12px;
+}
+
+.top-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.top-nav a {
+  display: inline-block;
+  text-decoration: none;
+  color: #0052cc;
+  background: #eef4ff;
+  border: 1px solid #d5e2ff;
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
+.top-nav a.is-active {
+  color: #fff;
+  background: #0052cc;
+  border-color: #0052cc;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.search-form input {
+  height: 34px;
+  border: 1px solid #cfd7e6;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.search-form label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.search-form button,
+.link-button {
+  height: 34px;
+  border: 1px solid #0052cc;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #0052cc;
+  color: #fff;
+  text-decoration: none;
+  line-height: 32px;
+}
+
+.link-button {
+  background: #fff;
+  color: #0052cc;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #d5e2ff;
+}
+
+.error-text {
+  color: #b00020;
+}
+
+.result-meta {
+  color: #3c455c;
+  margin: 10px 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #dfe3eb;
+  padding: 8px;
+  text-align: left;
+}
+
+.data-table thead th {
+  background: #f1f4f9;
+}
+
+.artist-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.artist-list li {
+  margin: 6px 0;
+}
+
+@media (max-width: 640px) {
+  .search-form label {
+    width: 100%;
+  }
+
+  .search-form input {
+    flex: 1;
+  }
+}

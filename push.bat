@@ -1,25 +1,37 @@
 @echo off
-chcp 932 >nul
+setlocal
+chcp 65001 >nul
 
-REM === プロジェクトルートへ移動 ===
-cd /d %~dp0
+cd /d "%~dp0"
 
-REM === まず pull してローカルを最新化 ===
-echo ==== Pulling latest changes ====
+echo ==== Pull latest changes ====
 git pull --rebase
+if errorlevel 1 goto :fail
 
-REM === 変更をステージング ===
+echo ==== Stage changes ====
 git add .
+if errorlevel 1 goto :fail
 
-REM === コミットメッセージ入力 ===
-set /p msg="Commit message: "
+set /p msg=Commit message:
+if "%msg%"=="" set msg=Update
 
-REM === コミット実行 ===
+echo ==== Create commit ====
 git commit -m "%msg%"
+if errorlevel 1 (
+  echo Commit was skipped or failed.
+)
 
-REM === GitHub へ push ====
+echo ==== Push ====
 git push
+if errorlevel 1 goto :fail
 
 echo.
-echo ==== Push 完了 ====
+echo ==== Done ====
 pause
+exit /b 0
+
+:fail
+echo.
+echo ==== Failed. Check messages above. ====
+pause
+exit /b 1
