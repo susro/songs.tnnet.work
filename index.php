@@ -172,7 +172,7 @@ $quickDecades = $decadeStmt->fetchAll();
         <h2>管理モード</h2>
         <p class="panel-note">登録・メンテナンス系の導線です（使用モードと分離）。</p>
         <p>
-            <a href="admin.php">管理ホームへ</a> /
+            <a href="builder.php">管理ホームへ</a> /
             <a href="add.php">曲を追加</a>
         </p>
     </section>
