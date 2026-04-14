@@ -5,6 +5,18 @@ body {
   color: #f7f9ff;
 }
 
+a {
+  color: #8fefff;
+}
+
+a:visited {
+  color: #cab8ff;
+}
+
+a:hover {
+  color: #c9fbff;
+}
+
 .container {
   max-width: 980px;
   margin: 0 auto;
@@ -236,6 +248,10 @@ h1 {
 .feature-tile-placeholder {
   border-style: dashed;
   opacity: 0.82;
+}
+
+.admin-panel {
+  opacity: 0.94;
 }
 
 @media (max-width: 640px) {

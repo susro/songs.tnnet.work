@@ -83,8 +83,7 @@ SELECT FLOOR(release_year / 10) * 10 AS decade, COUNT(*) AS song_count
 FROM songs
 WHERE release_year IS NOT NULL AND release_year >= 1900
 GROUP BY decade
-ORDER BY decade DESC
-LIMIT 6
+ORDER BY decade ASC
 ");
 $quickDecades = $decadeStmt->fetchAll();
 ?>
@@ -151,13 +150,13 @@ $quickDecades = $decadeStmt->fetchAll();
     </section>
 
     <section class="feature-tiles">
-        <a class="feature-tile" href="add.php">
-            <strong>曲登録</strong>
-            <span>新しい曲を追加する</span>
-        </a>
         <a class="feature-tile" href="artists.php">
             <strong>アーティスト</strong>
             <span>タグ付き一覧を見る</span>
+        </a>
+        <a class="feature-tile" href="<?= htmlspecialchars(indexUrlWith(['tag' => 'ロック'], ['q', 'year'])) ?>">
+            <strong>人気タグへ</strong>
+            <span>カテゴリから探す</span>
         </a>
         <div class="feature-tile feature-tile-placeholder">
             <strong>YouTube試聴</strong>
@@ -167,6 +166,15 @@ $quickDecades = $decadeStmt->fetchAll();
             <strong>マイリスト</strong>
             <span>準備中（拡張予定）</span>
         </div>
+    </section>
+
+    <section class="panel-card admin-panel">
+        <h2>管理モード</h2>
+        <p class="panel-note">登録・メンテナンス系の導線です（使用モードと分離）。</p>
+        <p>
+            <a href="add.php">曲を追加</a> /
+            <a href="artists.php">アーティスト管理</a>
+        </p>
     </section>
 
     <?php if ($keyword !== '' || $year !== '' || $tag !== ''): ?>
