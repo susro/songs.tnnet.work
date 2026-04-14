@@ -221,19 +221,21 @@ if ($runAddArtist) {
         <div class="active-filters">
             <span>タグで絞り込み:</span>
         </div>
-        <?php foreach ($tagGroups as $groupName => $tags): ?>
-            <?php if (!$tags) continue; ?>
-            <div class="tag-group">
-                <p class="panel-note tag-group-title"><?= htmlspecialchars($groupName) ?></p>
-                <div class="quick-chip-grid">
-                    <?php foreach ($tags as $tagName): ?>
-                        <button type="button" class="chip action-chip tag-filter jelly-chip" data-tag="<?= htmlspecialchars($tagName) ?>">
-                            <?= htmlspecialchars($tagName) ?>
-                        </button>
-                    <?php endforeach; ?>
+        <div class="tag-groups-grid">
+            <?php foreach ($tagGroups as $groupName => $tags): ?>
+                <?php if (!$tags) continue; ?>
+                <div class="tag-group">
+                    <p class="panel-note tag-group-title"><?= htmlspecialchars($groupName) ?></p>
+                    <div class="quick-chip-grid">
+                        <?php foreach ($tags as $tagName): ?>
+                            <button type="button" class="chip action-chip tag-filter jelly-chip" data-tag="<?= htmlspecialchars($tagName) ?>">
+                                <?= htmlspecialchars($tagName) ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </div>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
+        </div>
 
         <?php if ($errorMessage !== ''): ?>
             <div class="error-box"><p class="error-text"><?= htmlspecialchars($errorMessage) ?></p></div>
@@ -503,6 +505,7 @@ document.querySelectorAll('.theme-btn').forEach(function (button) {
 });
 syncCardState();
 syncSelectedInputs();
+document.getElementById('loading-overlay').hidden = true;
 applyArtistFilters();
 <?php if ($runFetch): ?>
 document.getElementById('loading-overlay').hidden = true;

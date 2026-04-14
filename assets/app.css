@@ -358,6 +358,15 @@ body.theme-cream-c .hero-card {
   box-shadow: 0 0 0 3px rgba(255, 183, 96, 0.25), 0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
+.top-launch-link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  text-decoration: none;
+}
+
 .admin-list {
   max-height: 420px;
   overflow-y: auto;
@@ -498,10 +507,20 @@ body.theme-cream-c .hero-card {
 
 .tag-group {
   margin-bottom: 6px;
+  border: 1px solid #cbb690;
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.42);
 }
 
 .tag-group-title {
   margin: 6px 0;
+}
+
+.tag-groups-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .loading-overlay {
@@ -512,6 +531,10 @@ body.theme-cream-c .hero-card {
   align-items: center;
   justify-content: center;
   z-index: 1200;
+}
+
+.loading-overlay[hidden] {
+  display: none !important;
 }
 
 .loading-box {
@@ -579,6 +602,10 @@ body.theme-cream-c .hero-card {
 
   .admin-side-tools {
     margin-left: 0;
+  }
+
+  .tag-groups-grid {
+    grid-template-columns: 1fr;
   }
 }
 

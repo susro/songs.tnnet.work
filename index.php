@@ -107,6 +107,7 @@ $quickDecades = $decadeStmt->fetchAll();
     <nav class="top-nav">
         <a href="index.php" class="is-active">トップ</a>
         <a href="artists.php">アーティスト一覧</a>
+        <a href="builder.php" class="launch-button top-launch-link">楽曲一括Get！</a>
     </nav>
 
     <section class="home-grid">
@@ -166,15 +167,6 @@ $quickDecades = $decadeStmt->fetchAll();
             <strong>マイリスト</strong>
             <span>準備中（拡張予定）</span>
         </div>
-    </section>
-
-    <section class="panel-card admin-panel">
-        <h2>管理モード</h2>
-        <p class="panel-note">登録・メンテナンス系の導線です（使用モードと分離）。</p>
-        <p>
-            <a href="builder.php">管理ホームへ</a> /
-            <a href="add.php">曲を追加</a>
-        </p>
     </section>
 
     <?php if ($keyword !== '' || $year !== '' || $tag !== ''): ?>
