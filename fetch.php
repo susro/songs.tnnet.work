@@ -28,17 +28,31 @@ $keywords = array_merge([$artist_name], $aliases);
 echo "Fetch: " . htmlspecialchars($artist_name) . "<br>";
 echo "検索ワード: " . implode(', ', $keywords) . "<br><br>";
 
-foreach ($keywords as $keyword) {
+function normalizeArtistName(string $name): string {
+    return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $name)));
+}
 
-    $url = "https://itunes.apple.com/search?term=" . urlencode($keyword) . "&country=jp&entity=song&limit=200";
+$normalizedArtistNames = array_values(array_filter(array_unique(array_map('normalizeArtistName', $keywords))));
+
+foreach ($keywords as $keyword) {
+    $keyword = trim((string)$keyword);
+    if ($keyword === '' || mb_strlen($keyword) < 2) {
+        continue;
+    }
+
+    $url = "https://itunes.apple.com/search?term=" . urlencode($keyword) . "&country=jp&entity=song&attribute=artistTerm&limit=200";
     $json = json_decode(file_get_contents($url), true);
 
     if (!$json || empty($json['results'])) continue;
 
     foreach ($json['results'] as $song) {
+        $resultArtist = normalizeArtistName((string)($song['artistName'] ?? ''));
+        if ($resultArtist === '' || !in_array($resultArtist, $normalizedArtistNames, true)) {
+            continue;
+        }
 
-        $title = $song['trackName'];
-        $year = substr($song['releaseDate'], 0, 4);
+        $title = trim((string)($song['trackName'] ?? ''));
+        $year = substr((string)($song['releaseDate'] ?? ''), 0, 4);
 
         // 重複チェック
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM songs WHERE title = ? AND artist_id = ?");

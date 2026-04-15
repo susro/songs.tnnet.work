@@ -1,80 +1,69 @@
 <?php
 require_once 'config.php';
+require_once 'fetch_helpers.php';
+session_start();
 
 $keyword = trim((string)($_POST['filter_keyword'] ?? $_GET['q'] ?? ''));
 $selectedTagsInitial = array_values(array_filter(array_unique(explode('|', trim((string)($_POST['selected_tags'] ?? ''))))));
 $selectedArtistIds = array_map('intval', $_POST['artist_ids'] ?? []);
 $action = (string)($_POST['action'] ?? '');
-$runFetch = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'bulk_fetch';
+$runPrepare = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'prepare_fetch';
+$runCommit = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'commit_fetch';
+$runClearSession = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'clear_fetch_session';
 $runAddArtist = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_artist';
 $results = [];
+$importCandidates = $_SESSION['builder_fetch_candidates'] ?? [];
 $errorMessage = '';
 $successMessage = '';
 $modalMessage = '';
 $modalMessageType = '';
+$fetchSummary = null;
 
-function fetchSongsForArtist(PDO $pdo, int $artistId): array {
-    $stmt = $pdo->prepare("SELECT name FROM artists WHERE id = ?");
-    $stmt->execute([$artistId]);
-    $artistName = (string)$stmt->fetchColumn();
-    if ($artistName === '') {
-        return ['artist_id' => $artistId, 'artist_name' => '(不明)', 'inserted' => 0, 'skipped' => 0, 'error' => 'アーティストが見つかりません'];
+if ($runPrepare) {
+    if (!$selectedArtistIds) {
+        $errorMessage = 'アーティストを1件以上選択してください。';
+    } else {
+        $importCandidates = [];
+        $totalCandidates = 0;
+        foreach ($selectedArtistIds as $artistId) {
+            $candidate = fetchCandidateSongsForArtist($pdo, $artistId);
+            $totalCandidates += count($candidate['candidates']);
+            $importCandidates[$artistId] = $candidate;
+        }
+        $_SESSION['builder_fetch_candidates'] = $importCandidates;
+        $fetchSummary = [
+            'artists' => count($importCandidates),
+            'songs' => $totalCandidates,
+        ];
     }
+}
 
-    $stmt = $pdo->prepare("SELECT alias FROM artist_aliases WHERE artist_id = ?");
-    $stmt->execute([$artistId]);
-    $aliases = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    $keywords = array_unique(array_filter(array_merge([$artistName], $aliases)));
-    $inserted = 0;
-    $skipped = 0;
-    $hasApiResponse = false;
-
-    foreach ($keywords as $word) {
-        $url = "https://itunes.apple.com/search?term=" . urlencode($word) . "&country=jp&entity=song&limit=200";
-        $jsonText = @file_get_contents($url);
-        if ($jsonText === false) {
-            continue;
-        }
-        $json = json_decode($jsonText, true);
-        if (!$json || !isset($json['results']) || !is_array($json['results'])) {
-            continue;
-        }
-        $hasApiResponse = true;
-        if (empty($json['results'])) {
-            continue;
-        }
-
-        foreach ($json['results'] as $song) {
-            $title = trim((string)($song['trackName'] ?? ''));
-            if ($title === '') {
-                continue;
-            }
-            $year = substr((string)($song['releaseDate'] ?? ''), 0, 4);
-            $yearValue = ctype_digit($year) ? (int)$year : null;
-
-            $dup = $pdo->prepare("SELECT COUNT(*) FROM songs WHERE title = ? AND artist_id = ?");
-            $dup->execute([$title, $artistId]);
-            if ((int)$dup->fetchColumn() > 0) {
-                $skipped++;
-                continue;
-            }
-
-            $insert = $pdo->prepare("INSERT INTO songs (title, artist_id, release_year) VALUES (?, ?, ?)");
-            $insert->execute([$title, $artistId, $yearValue]);
-            $inserted++;
-        }
+if ($runCommit) {
+    if (empty($_SESSION['builder_fetch_candidates'])) {
+        $errorMessage = '取り込み候補が見つかりません。まずはアーティストを選択して候補を取得してください。';
+    } else {
+        $commitResult = commitCandidateImport($pdo, $_SESSION['builder_fetch_candidates']);
+        unset($_SESSION['builder_fetch_candidates']);
+        $importCandidates = [];
+        $successMessage = sprintf('取り込み完了: %d 曲を %d アーティストから登録しました。', $commitResult['inserted'], $commitResult['artist_count']);
     }
+}
 
-    $update = $pdo->prepare("
-        UPDATE artists
-        SET fetch_attempts = fetch_attempts + 1,
-            last_fetch_at = NOW(),
-            fetch_failed = ?
-        WHERE id = ?
-    ");
-    $update->execute([$hasApiResponse ? 0 : 1, $artistId]);
+if ($runClearSession) {
+    unset($_SESSION['builder_fetch_candidates']);
+    $importCandidates = [];
+    $successMessage = '候補をクリアしました。';
+}
 
-    return ['artist_id' => $artistId, 'artist_name' => $artistName, 'inserted' => $inserted, 'skipped' => $skipped, 'error' => ''];
+if ($fetchSummary === null && $importCandidates) {
+    $songCount = 0;
+    foreach ($importCandidates as $candidateGroup) {
+        $songCount += count($candidateGroup['candidates']);
+    }
+    $fetchSummary = [
+        'artists' => count($importCandidates),
+        'songs' => $songCount,
+    ];
 }
 
 $where = [];
@@ -135,25 +124,6 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $artists = $stmt->fetchAll();
 $tagGroups = $buildTagGroups($artists);
-
-if ($runFetch) {
-    if (!$selectedArtistIds) {
-        $errorMessage = 'アーティストを1件以上選択してください。';
-    } else {
-        foreach ($selectedArtistIds as $artistId) {
-            $results[] = fetchSongsForArtist($pdo, $artistId);
-        }
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $artists = $stmt->fetchAll();
-        $tagGroups = $buildTagGroups($artists);
-    }
-}
-
-$totalInserted = 0;
-foreach ($results as $resultRow) {
-    $totalInserted += (int)$resultRow['inserted'];
-}
 
 if ($runAddArtist) {
     $newArtistName = trim((string)($_POST['new_artist_name'] ?? ''));
@@ -222,10 +192,18 @@ if ($runAddArtist) {
         <a href="index.php">トップ</a>
         <a href="artists.php">アーティスト一覧</a>
         <a href="builder.php" class="is-active">曲を増やす！</a>
+        <a href="import_history.php">取り込み履歴</a>
     </nav>
 
     <section class="panel-card">
         <h2>まとめて楽曲Get！</h2>
+
+        <?php if ($errorMessage): ?>
+            <div class="error-box"><?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php endif; ?>
+        <?php if ($successMessage): ?>
+            <div class="success-box"><?php echo htmlspecialchars($successMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php endif; ?>
 
         <div class="search-form">
             <input type="text" id="artist-filter-input" value="<?= htmlspecialchars($keyword) ?>" placeholder="アーティスト名で絞り込み">
@@ -251,7 +229,7 @@ if ($runAddArtist) {
         </div>
 
         <form method="post" id="bulk-get-form">
-            <input type="hidden" name="action" value="bulk_fetch">
+            <input type="hidden" name="action" value="prepare_fetch">
             <input type="hidden" name="filter_keyword" id="filter_keyword_input" value="<?= htmlspecialchars($keyword) ?>">
             <input type="hidden" name="selected_tags" id="selected_tags_input" value="<?= htmlspecialchars(implode('|', $selectedTagsInitial)) ?>">
             <div id="selected-artist-inputs"></div>
@@ -259,6 +237,26 @@ if ($runAddArtist) {
                 <button type="button" id="toggle-visible-selection">表示中を選択</button>
                 <button type="submit" class="launch-button">まとめて楽曲Get！</button>
             </div>
+
+            <?php if ($fetchSummary !== null): ?>
+                <div class="panel-card" style="margin-top: 16px;">
+                    <h3>取り込み候補</h3>
+                    <p>候補アーティスト: <?= (int)$fetchSummary['artists'] ?>件</p>
+                    <p>候補曲数: <?= (int)$fetchSummary['songs'] ?>曲</p>
+                    <?php if ((int)$fetchSummary['songs'] > 0): ?>
+                        <div class="select-tools">
+                            <button type="submit" name="action" value="commit_fetch" class="launch-button">このまま一括取込み</button>
+                            <a class="link-button" href="builder_select.php">選択取込みへ進む</a>
+                            <button type="submit" name="action" value="clear_fetch_session" class="link-button">候補をクリア</button>
+                        </div>
+                    <?php else: ?>
+                        <p>候補曲が見つかりませんでした。検索条件やアーティスト選択を見直してください。</p>
+                        <div class="select-tools">
+                            <button type="submit" name="action" value="clear_fetch_session" class="link-button">候補をクリア</button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
 
             <div class="meta-row">
                 <p class="result-meta">
@@ -549,11 +547,6 @@ applyArtistFilters();
 addArtistDialog.close();
 document.getElementById('add-artist-result-text').textContent = "<?= htmlspecialchars($modalMessage, ENT_QUOTES, 'UTF-8') ?>";
 document.getElementById('add-artist-result-dialog').showModal();
-<?php endif; ?>
-<?php if ($runFetch): ?>
-document.getElementById('loading-overlay').hidden = true;
-document.getElementById('fetch-result-summary').textContent = "<?= count($results) ?>アーティストで <?= (int)$totalInserted ?>曲 を取り込みました！";
-fetchResultDialog.showModal();
 <?php endif; ?>
 document.getElementById('close-add-artist-result').addEventListener('click', function () {
   document.getElementById('add-artist-result-dialog').close();
