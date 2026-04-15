@@ -83,6 +83,7 @@ $artists = $stmt->fetchAll();
                     — <em>タグなし</em>
                 <?php endif; ?>
                 — <a href="fetch.php?artist_id=<?= $a['id'] ?>">Fetch</a>
+                — <a href="artist_clear.php?artist_id=<?= $a['id'] ?>" class="link-button">曲を全削除</a>
             </li>
         <?php endforeach; ?>
         </ul>
