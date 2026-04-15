@@ -112,9 +112,9 @@ $buildTagGroups = function (array $artists): array {
     $allTags = array_keys($allTags);
     sort($allTags, SORT_NATURAL);
     $tagGroups = [
-        'decade' => ['年代タグなし'],
-        'genre' => ['ジャンルタグなし'],
-        'other' => ['タグなし'],
+        'decade' => [],
+        'genre' => [],
+        'other' => [],
     ];
     foreach ($allTags as $tagName) {
         if (preg_match('/^[0-9]{4}年代$/u', $tagName)) {
@@ -125,6 +125,9 @@ $buildTagGroups = function (array $artists): array {
             $tagGroups['other'][] = $tagName;
         }
     }
+    $tagGroups['decade'][] = '年代タグなし';
+    $tagGroups['genre'][] = 'ジャンルタグなし';
+    $tagGroups['other'][] = 'タグなし';
     return $tagGroups;
 };
 
@@ -229,9 +232,8 @@ if ($runAddArtist) {
             <a class="link-button" href="builder.php">クリア</a>
         </div>
 
-        <div class="active-filters" id="active-filters">
-            <span id="active-filters-label">絞り込み中:</span>
-            <button type="button" class="chip action-chip" id="clear-tag-filters">タグをクリア</button>
+        <div class="tag-clear-slot">
+            <button type="button" class="chip action-chip" id="clear-tag-filters" hidden>タグをクリア</button>
         </div>
         <div class="tag-groups-grid">
             <?php foreach ($tagGroups as $tags): ?>
@@ -368,7 +370,7 @@ if ($runAddArtist) {
 <script>
 var selectedTags = new Set(<?= json_encode(array_values($selectedTagsInitial), JSON_UNESCAPED_UNICODE) ?>);
 var selectedArtistIds = new Set([<?= implode(',', array_map('intval', $selectedArtistIds)) ?>]);
-var activeFilters = document.getElementById('active-filters');
+var clearTagFiltersButton = document.getElementById('clear-tag-filters');
 var toggleVisibleSelectionButton = document.getElementById('toggle-visible-selection');
 
 function syncSelectedInputs() {
@@ -405,48 +407,8 @@ function updateToggleVisibleButton() {
   toggleVisibleSelectionButton.textContent = allVisibleSelected ? '表示中を解除' : '表示中を選択';
 }
 
-function renderActiveFilters() {
-  var keyword = document.getElementById('artist-filter-input').value.trim();
-  var tags = Array.from(selectedTags);
-  activeFilters.innerHTML = '';
-  if (keyword === '' && tags.length === 0) {
-    activeFilters.hidden = true;
-    return;
-  }
-
-  activeFilters.hidden = false;
-  var baseLabel = document.createElement('span');
-  baseLabel.textContent = '絞り込み中:';
-  activeFilters.appendChild(baseLabel);
-
-  if (keyword !== '') {
-    var keywordChip = document.createElement('span');
-    keywordChip.className = 'chip';
-    keywordChip.textContent = '名前: ' + keyword;
-    activeFilters.appendChild(keywordChip);
-  }
-
-  tags.forEach(function (tag) {
-    var chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.textContent = tag;
-    activeFilters.appendChild(chip);
-  });
-
-  var clearButton = document.createElement('button');
-  clearButton.type = 'button';
-  clearButton.className = 'chip action-chip';
-  clearButton.textContent = 'タグをクリア';
-  clearButton.disabled = tags.length === 0;
-  clearButton.addEventListener('click', function () {
-    selectedTags.clear();
-    document.querySelectorAll('.tag-filter.is-active').forEach(function (tagButton) {
-      tagButton.classList.remove('is-active');
-    });
-    applyArtistFilters();
-    syncSelectedInputs();
-  });
-  activeFilters.appendChild(clearButton);
+function updateClearTagButton() {
+  clearTagFiltersButton.hidden = selectedTags.size === 0;
 }
 
 function toggleVisibleSelectionByState(selectVisible) {
@@ -490,10 +452,19 @@ function applyArtistFilters() {
     if (show) visible++;
   });
   document.getElementById('visible-count').textContent = String(visible);
-  renderActiveFilters();
+  updateClearTagButton();
   updateToggleVisibleButton();
   window.scrollTo(0, prevScrollY);
 }
+
+clearTagFiltersButton.addEventListener('click', function () {
+  selectedTags.clear();
+  document.querySelectorAll('.tag-filter.is-active').forEach(function (tagButton) {
+    tagButton.classList.remove('is-active');
+  });
+  applyArtistFilters();
+  syncSelectedInputs();
+});
 
 document.querySelectorAll('.admin-card').forEach(function (card) {
   card.addEventListener('click', function (event) {

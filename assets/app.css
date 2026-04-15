@@ -155,6 +155,14 @@ body.theme-cream-c .top-nav a {
   font-size: 0.88rem;
 }
 
+.tag-clear-slot {
+  min-height: 34px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .chip {
   display: inline-flex;
   gap: 4px;
@@ -466,6 +474,7 @@ body.theme-cream-c .hero-card {
   background: transparent;
   padding: 0;
   width: min(520px, calc(100vw - 20px));
+  color: #edf4ff;
 }
 
 .add-artist-dialog::backdrop {
@@ -474,6 +483,7 @@ body.theme-cream-c .hero-card {
 
 .add-artist-dialog .panel-card {
   margin: 0;
+  color: inherit;
 }
 
 .add-artist-dialog label {
@@ -484,6 +494,17 @@ body.theme-cream-c .hero-card {
 .add-artist-dialog input[type="text"] {
   width: 100%;
   box-sizing: border-box;
+  height: 34px;
+  border: 1px solid #6b6f9b;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #131631;
+  color: #f7f9ff;
+}
+
+#add-artist-result-text,
+#fetch-result-summary {
+  color: inherit;
 }
 
 .theme-switch {
@@ -724,6 +745,20 @@ body.theme-cream-b .tag-group,
 body.theme-cream-c .tag-group {
   background: rgba(255, 250, 241, 0.82);
   border-color: #ccb48e;
+}
+
+body.theme-cream-a .add-artist-dialog,
+body.theme-cream-b .add-artist-dialog,
+body.theme-cream-c .add-artist-dialog {
+  color: #3d2e22;
+}
+
+body.theme-cream-a .add-artist-dialog input[type="text"],
+body.theme-cream-b .add-artist-dialog input[type="text"],
+body.theme-cream-c .add-artist-dialog input[type="text"] {
+  background: #fffdf8;
+  color: #3a2c1f;
+  border-color: #c8af89;
 }
 
 @media (max-width: 640px) {
