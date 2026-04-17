@@ -1,27 +1,17 @@
 <?php
 require_once 'config.php';
 
-$stmt = $pdo->query("
-    SELECT sl.id, sl.name, sl.memo, sl.updated_at,
-           COUNT(ss.song_id) AS song_count
-    FROM songlists sl
-    LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id
-    GROUP BY sl.id ORDER BY sl.updated_at DESC
-");
-$lists = $stmt->fetchAll();
-
-// リスト詳細（?id=X の場合）
+$id     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $detail = null;
 $detailSongs = [];
-if (!empty($_GET['id'])) {
-    $id = (int)$_GET['id'];
+
+if ($id) {
     $s = $pdo->prepare("SELECT * FROM songlists WHERE id = ?");
     $s->execute([$id]);
     $detail = $s->fetch();
     if ($detail) {
         $ss = $pdo->prepare("
-            SELECT s.id, s.title, s.release_year, s.youtube_url,
-                   a.name AS artist_name, sl.position
+            SELECT s.id, s.title, s.release_year, s.youtube_url, a.name AS artist_name
             FROM songlist_songs sl
             JOIN songs s ON sl.song_id = s.id
             LEFT JOIN artists a ON s.artist_id = a.id
@@ -32,119 +22,134 @@ if (!empty($_GET['id'])) {
         $detailSongs = $ss->fetchAll();
     }
 }
+
+if (!$detail) {
+    $listStmt = $pdo->query("
+        SELECT sl.id, sl.name, sl.memo, sl.updated_at,
+               COUNT(ss.song_id) AS song_count
+        FROM songlists sl
+        LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id
+        GROUP BY sl.id ORDER BY sl.updated_at DESC
+    ");
+    $lists = $listStmt->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ソングリスト – Songs.TNNET</title>
+<title><?= $detail ? htmlspecialchars($detail['name']) . ' – ' : '' ?>ソングリスト – Songs.TNNET</title>
 <link rel="stylesheet" href="assets/app.css">
 </head>
-<body class="app-layout">
+<body>
+<div class="app-shell">
+  <?php $activePage = 'lists'; include '_nav.php'; ?>
 
-<header class="app-bar">
-  <?php if ($detail): ?>
-    <a href="songlists.php" class="app-bar-back">←</a>
-    <span class="app-bar-title"><?= htmlspecialchars($detail['name']) ?></span>
-  <?php else: ?>
-    <span class="app-bar-title">ソングリスト</span>
-  <?php endif; ?>
-</header>
+  <div class="main-wrap">
+    <header class="page-header">
+      <span class="page-header-brand">Songs.TNNET</span>
+      <?php if ($detail): ?>
+        <a href="songlists.php" class="page-back">← 一覧</a>
+        <span class="page-title"><?= htmlspecialchars($detail['name']) ?></span>
+      <?php else: ?>
+        <span class="page-title">ソングリスト</span>
+      <?php endif; ?>
+    </header>
 
-<main class="song-list-area">
+    <div class="page-body">
 
-<?php if ($detail): ?>
-  <!-- ── リスト詳細 ── -->
-  <div class="list-detail-header panel-card">
-    <div class="list-detail-name"><?= htmlspecialchars($detail['name']) ?></div>
-    <?php if ($detail['memo']): ?>
-      <div class="list-detail-memo"><?= htmlspecialchars($detail['memo']) ?></div>
-    <?php endif; ?>
-    <div class="list-detail-meta"><?= count($detailSongs) ?>曲</div>
-    <div class="list-detail-actions">
-      <button class="set-active-btn" data-id="<?= $detail['id'] ?>" data-name="<?= htmlspecialchars($detail['name']) ?>" data-count="<?= count($detailSongs) ?>">
-        このリストをアクティブに設定
-      </button>
-    </div>
-  </div>
-
-  <?php if (!$detailSongs): ?>
-    <div class="list-msg">曲がまだありません。<a href="index.php">曲一覧</a>から追加してください。</div>
-  <?php else: ?>
-    <div id="detail-song-list">
-    <?php foreach ($detailSongs as $s): ?>
-      <div class="song-card" data-id="<?= $s['id'] ?>">
-        <div class="song-card-body">
-          <div class="song-title"><?= htmlspecialchars($s['title']) ?></div>
-          <div class="song-meta">
-            <?= htmlspecialchars($s['artist_name'] ?? '—') ?>
-            <?= $s['release_year'] ? ' · ' . $s['release_year'] : '' ?>
-          </div>
+    <?php if ($detail): ?>
+      <!-- ── リスト詳細 ── -->
+      <div class="detail-header-card">
+        <div class="detail-header-body">
+          <div class="detail-title"><?= htmlspecialchars($detail['name']) ?></div>
+          <?php if ($detail['memo']): ?>
+            <div class="detail-meta"><?= htmlspecialchars($detail['memo']) ?></div>
+          <?php endif; ?>
+          <div class="detail-meta"><?= count($detailSongs) ?>曲</div>
         </div>
-        <?php if ($s['youtube_url']): ?>
-          <a class="yt-btn" href="<?= htmlspecialchars($s['youtube_url']) ?>" target="_blank" rel="noopener" aria-label="試聴">▶</a>
-        <?php endif; ?>
-        <button class="remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>" aria-label="削除">✕</button>
+        <button class="set-active-btn"
+                data-id="<?= $detail['id'] ?>"
+                data-name="<?= htmlspecialchars($detail['name']) ?>"
+                data-count="<?= count($detailSongs) ?>">
+          アクティブに設定
+        </button>
       </div>
-    <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
 
-<?php else: ?>
-  <!-- ── リスト一覧 ── -->
-  <div class="list-toolbar">
-    <button id="new-list-btn" class="btn-primary">＋ 新しいリスト</button>
-  </div>
+      <a href="songs.php" class="add-songs-link">＋ 曲を追加する →</a>
 
-  <div id="new-list-form" class="panel-card" hidden>
-    <label class="form-label">リスト名
-      <input type="text" id="new-list-name" placeholder="例: カラオケ夏2025" maxlength="100">
-    </label>
-    <div class="form-row">
-      <button id="create-list-btn" class="btn-primary">作成</button>
-      <button id="cancel-new-btn" class="btn-secondary">キャンセル</button>
-    </div>
-  </div>
-
-  <?php if (!$lists): ?>
-    <div class="list-msg">まだリストがありません。上のボタンから作成してください。</div>
-  <?php else: ?>
-    <div id="list-cards">
-    <?php foreach ($lists as $sl): ?>
-      <a href="songlists.php?id=<?= $sl['id'] ?>" class="list-card">
-        <div class="list-card-body">
-          <div class="list-card-name"><?= htmlspecialchars($sl['name']) ?></div>
-          <div class="list-card-meta"><?= (int)$sl['song_count'] ?>曲
-            · <?= date('m/d', strtotime($sl['updated_at'])) ?>更新
-          </div>
+      <?php if (!$detailSongs): ?>
+        <div class="list-msg">曲がまだありません。「曲を追加する」から追加してください。</div>
+      <?php else: ?>
+        <div class="list-card-wrap" id="detail-song-list">
+          <?php foreach ($detailSongs as $i => $s): ?>
+            <div class="song-card" data-id="<?= $s['id'] ?>">
+              <span class="song-card-num"><?= $i + 1 ?></span>
+              <div class="song-card-body">
+                <div class="song-title"><?= htmlspecialchars($s['title']) ?></div>
+                <div class="song-meta">
+                  <?= htmlspecialchars($s['artist_name'] ?? '—') ?>
+                  <?= $s['release_year'] ? ' · ' . $s['release_year'] : '' ?>
+                </div>
+              </div>
+              <?php if ($s['youtube_url']): ?>
+                <a class="yt-btn" href="<?= htmlspecialchars($s['youtube_url']) ?>" target="_blank" rel="noopener">▶</a>
+              <?php endif; ?>
+              <button class="remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
+            </div>
+          <?php endforeach; ?>
         </div>
-        <span class="list-card-arrow">›</span>
-      </a>
-    <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
 
-<?php endif; ?>
-</main>
+        <div class="danger-zone">
+          <button class="btn-danger" id="delete-list-btn" data-id="<?= $detail['id'] ?>">
+            このリストを削除
+          </button>
+        </div>
+      <?php endif; ?>
 
-<nav class="bottom-nav">
-  <a href="index.php" class="bottom-nav-item">
-    <span class="nav-icon">♪</span>
-    <span class="nav-label">曲一覧</span>
-  </a>
-  <a href="songlists.php" class="bottom-nav-item is-active">
-    <span class="nav-icon">📋</span>
-    <span class="nav-label">リスト</span>
-  </a>
-  <a href="admin.php" class="bottom-nav-item">
-    <span class="nav-icon">⚙</span>
-    <span class="nav-label">管理</span>
-  </a>
-</nav>
+    <?php else: ?>
+      <!-- ── リスト一覧 ── -->
+      <button class="btn-primary" id="new-list-btn">＋ 新しいリスト</button>
+
+      <div class="new-list-form" id="new-list-form" hidden>
+        <label class="form-label">リスト名
+          <input type="text" id="new-list-name" placeholder="例: カラオケ夏2025" maxlength="100">
+        </label>
+        <div class="form-row">
+          <button class="btn-primary"   id="create-list-btn">作成</button>
+          <button class="btn-secondary" id="cancel-new-btn">キャンセル</button>
+        </div>
+      </div>
+
+      <?php if (empty($lists)): ?>
+        <div class="list-msg">まだリストがありません。上のボタンから作成してください。</div>
+      <?php else: ?>
+        <div class="list-card-wrap">
+          <?php foreach ($lists as $sl): ?>
+            <a href="songlists.php?id=<?= $sl['id'] ?>" class="list-card">
+              <span class="list-card-icon">📋</span>
+              <div class="list-card-body">
+                <div class="list-card-name"><?= htmlspecialchars($sl['name']) ?></div>
+                <div class="list-card-meta">
+                  <?= (int)$sl['song_count'] ?>曲
+                  · <?= date('m/d', strtotime($sl['updated_at'])) ?>更新
+                </div>
+              </div>
+              <span class="list-card-count"><?= (int)$sl['song_count'] ?></span>
+              <span class="list-card-arrow">›</span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+    <?php endif; ?>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-wrap -->
+</div><!-- /app-shell -->
 
 <script>
-// ── 新規リスト作成 ──
 document.getElementById('new-list-btn')?.addEventListener('click', () => {
   document.getElementById('new-list-form').hidden = false;
   document.getElementById('new-list-name').focus();
@@ -155,38 +160,36 @@ document.getElementById('cancel-new-btn')?.addEventListener('click', () => {
 document.getElementById('create-list-btn')?.addEventListener('click', async () => {
   const name = document.getElementById('new-list-name').value.trim();
   if (!name) return;
-  const fd = new FormData();
-  fd.append('action', 'create'); fd.append('name', name);
-  const res  = await fetch('api/songlist.php', { method: 'POST', body: fd });
-  const data = await res.json();
+  const fd = new FormData(); fd.append('action','create'); fd.append('name', name);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
   if (data.ok) location.href = 'songlists.php?id=' + data.data.id;
 });
 
-// ── 曲を削除（詳細画面）──
 document.getElementById('detail-song-list')?.addEventListener('click', async e => {
   const btn = e.target.closest('.remove-btn');
   if (!btn) return;
   if (!confirm('このリストから削除しますか？')) return;
   const fd = new FormData();
-  fd.append('action',      'remove_song');
-  fd.append('songlist_id', btn.dataset.list);
-  fd.append('song_id',     btn.dataset.song);
-  const res  = await fetch('api/songlist.php', { method: 'POST', body: fd });
-  const data = await res.json();
+  fd.append('action','remove_song'); fd.append('songlist_id', btn.dataset.list); fd.append('song_id', btn.dataset.song);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
   if (data.ok) btn.closest('.song-card').remove();
 });
 
-// ── アクティブリストに設定 ──
 document.querySelector('.set-active-btn')?.addEventListener('click', e => {
   const btn = e.currentTarget;
   localStorage.setItem('activeList', JSON.stringify({
-    id: parseInt(btn.dataset.id),
-    name: btn.dataset.name,
-    count: parseInt(btn.dataset.count),
+    id: parseInt(btn.dataset.id), name: btn.dataset.name, count: parseInt(btn.dataset.count),
   }));
   btn.textContent = '✓ アクティブに設定しました';
   btn.disabled = true;
-  setTimeout(() => location.href = 'index.php', 800);
+  setTimeout(() => location.href = 'songs.php', 700);
+});
+
+document.getElementById('delete-list-btn')?.addEventListener('click', async e => {
+  if (!confirm('このリストを削除しますか？（曲データは削除されません）')) return;
+  const fd = new FormData(); fd.append('action','delete'); fd.append('id', e.currentTarget.dataset.id);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
+  if (data.ok) location.href = 'songlists.php';
 });
 </script>
 </body>

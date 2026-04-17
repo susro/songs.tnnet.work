@@ -1,17 +1,22 @@
 <?php
 require_once 'config.php';
 
-// タグ一覧（フィルターバー用）
-$tagStmt = $pdo->query("
-    SELECT t.name, COUNT(DISTINCT at2.artist_id) AS cnt
-    FROM tags t
-    JOIN artist_tags at2 ON at2.tag_id = t.id
-    WHERE t.name NOT REGEXP '^[0-9]{4}年代$'
-    GROUP BY t.id, t.name
-    ORDER BY cnt DESC
-    LIMIT 20
+// 最近追加した曲（5件）
+$recentStmt = $pdo->query("
+    SELECT s.id, s.title, s.release_year, a.name AS artist_name
+    FROM songs s
+    LEFT JOIN artists a ON s.artist_id = a.id
+    ORDER BY s.id DESC LIMIT 5
 ");
-$filterTags = $tagStmt->fetchAll();
+$recentSongs = $recentStmt->fetchAll();
+
+// 統計
+$stats = $pdo->query("
+    SELECT
+      (SELECT COUNT(*) FROM songs)    AS song_count,
+      (SELECT COUNT(*) FROM artists)  AS artist_count,
+      (SELECT COUNT(*) FROM songlists) AS list_count
+")->fetch();
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -21,295 +26,106 @@ $filterTags = $tagStmt->fetchAll();
 <title>Songs.TNNET</title>
 <link rel="stylesheet" href="assets/app.css">
 </head>
-<body class="app-layout">
+<body>
+<div class="app-shell">
+  <?php $activePage = 'home'; include '_nav.php'; ?>
 
-<!-- ── アプリバー ── -->
-<header class="app-bar">
-  <span class="app-bar-title">Songs.TNNET</span>
-</header>
+  <div class="main-wrap">
+    <header class="page-header">
+      <span class="page-header-brand">Songs.TNNET</span>
+      <span class="page-title">ホーム</span>
+    </header>
 
-<!-- ── 検索・フィルターエリア（固定）── -->
-<div class="search-area">
-  <div class="search-row">
-    <input type="search" id="q" placeholder="曲名・アーティスト" autocomplete="off" enterkeyhint="search">
-    <button id="clear-btn" class="clear-btn" hidden aria-label="クリア">✕</button>
-  </div>
-  <div class="tag-scroll-wrap">
-    <div class="tag-scroll" id="tag-bar">
-      <button class="tag-pill is-active" data-tag="">すべて</button>
-      <?php foreach ($filterTags as $ft): ?>
-        <button class="tag-pill" data-tag="<?= htmlspecialchars($ft['name']) ?>">
-          <?= htmlspecialchars($ft['name']) ?>
-        </button>
-      <?php endforeach; ?>
-    </div>
-  </div>
-</div>
+    <div class="page-body">
 
-<!-- ── 曲リスト（スクロール）── -->
-<main class="song-list-area" id="song-area">
-  <div id="song-list"></div>
-  <div id="pagination"></div>
-</main>
+      <!-- ── アクティブリストカード ── -->
+      <div id="home-active-list" class="active-list-card no-list" onclick="location.href='songlists.php'">
+        <span class="active-list-card-icon">📋</span>
+        <div class="active-list-card-body">
+          <div class="active-list-card-name">リストが選択されていません</div>
+          <div class="active-list-card-meta">タップしてリストを選ぶ</div>
+        </div>
+        <span class="active-list-card-arrow">›</span>
+      </div>
 
-<!-- ── アクティブリストバー ── -->
-<div class="active-list-bar" id="active-list-bar" hidden>
-  <span class="list-bar-icon">📋</span>
-  <span id="active-list-name" class="list-bar-name"></span>
-  <span id="active-list-count" class="list-bar-count"></span>
-  <a href="songlists.php" class="list-bar-link">開く →</a>
-</div>
+      <!-- ── アクションタイル（デンモク風）── -->
+      <div class="action-grid">
+        <a href="songs.php" class="action-tile">
+          <span class="action-icon">🔍</span>
+          <span class="action-label">曲を探す</span>
+          <span class="action-sub">検索・フィルター・追加</span>
+        </a>
+        <a href="songlists.php" class="action-tile">
+          <span class="action-icon">📋</span>
+          <span class="action-label">リスト管理</span>
+          <span class="action-sub">作成・編集・切替</span>
+        </a>
+        <a href="songs.php?mytag=1" class="action-tile">
+          <span class="action-icon">⭐</span>
+          <span class="action-label">マイタグ</span>
+          <span class="action-sub">お気に入り・練習中</span>
+        </a>
+        <a href="admin.php" class="action-tile">
+          <span class="action-icon">⚙</span>
+          <span class="action-label">管理</span>
+          <span class="action-sub">楽曲・アーティスト追加</span>
+        </a>
+      </div>
 
-<!-- ── 下部ナビ ── -->
-<nav class="bottom-nav">
-  <a href="index.php" class="bottom-nav-item is-active">
-    <span class="nav-icon">♪</span>
-    <span class="nav-label">曲一覧</span>
-  </a>
-  <a href="songlists.php" class="bottom-nav-item">
-    <span class="nav-icon">📋</span>
-    <span class="nav-label">リスト</span>
-  </a>
-  <a href="admin.php" class="bottom-nav-item">
-    <span class="nav-icon">⚙</span>
-    <span class="nav-label">管理</span>
-  </a>
-</nav>
+      <!-- ── 統計バー ── -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-num"><?= number_format((int)$stats['song_count']) ?></span>
+          <span class="stat-label">曲</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num"><?= number_format((int)$stats['artist_count']) ?></span>
+          <span class="stat-label">アーティスト</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num"><?= (int)$stats['list_count'] ?></span>
+          <span class="stat-label">リスト</span>
+        </div>
+      </div>
 
-<!-- ── リスト選択ダイアログ ── -->
-<dialog id="list-picker" class="list-picker-dialog">
-  <div class="dialog-card">
-    <h3 class="dialog-title">リストを選択 / 作成</h3>
-    <div id="picker-lists" class="picker-list"></div>
-    <div class="picker-new">
-      <input type="text" id="picker-new-name" placeholder="新しいリスト名" maxlength="100">
-      <button id="picker-new-btn">作成</button>
-    </div>
-    <button class="dialog-cancel" id="picker-cancel">キャンセル</button>
-  </div>
-</dialog>
+      <!-- ── 最近追加した曲 ── -->
+      <p class="section-title">最近追加</p>
+      <div class="recent-list">
+        <?php foreach ($recentSongs as $s): ?>
+          <a href="songs.php?q=<?= urlencode($s['title']) ?>" class="recent-item">
+            <span class="recent-item-icon">♪</span>
+            <div>
+              <div class="recent-item-title"><?= htmlspecialchars($s['title']) ?></div>
+              <div class="recent-item-meta">
+                <?= htmlspecialchars($s['artist_name'] ?? '—') ?>
+                <?= $s['release_year'] ? ' · ' . $s['release_year'] : '' ?>
+              </div>
+            </div>
+          </a>
+        <?php endforeach; ?>
+        <?php if (!$recentSongs): ?>
+          <div class="recent-item"><span class="recent-item-meta">まだ曲が登録されていません</span></div>
+        <?php endif; ?>
+      </div>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-wrap -->
+</div><!-- /app-shell -->
 
 <script>
-const state = {
-  q: '', tag: '', page: 1,
-  activeListId: null, activeListName: null, activeListCount: 0,
-};
-
-// ── localStorage からアクティブリストを復元 ──
-function initActiveList() {
+(function () {
   try {
     const s = JSON.parse(localStorage.getItem('activeList') || 'null');
-    if (s && s.id) {
-      state.activeListId   = s.id;
-      state.activeListName = s.name;
-      state.activeListCount = s.count || 0;
-      updateActiveBar();
-    }
+    if (!s || !s.id) return;
+    const card = document.getElementById('home-active-list');
+    card.classList.replace('no-list', 'has-list');
+    card.querySelector('.active-list-card-name').textContent = s.name;
+    card.querySelector('.active-list-card-meta').textContent = (s.count || 0) + '曲';
+    card.onclick = () => location.href = 'songlists.php?id=' + s.id;
   } catch {}
-}
-
-function saveActiveList() {
-  localStorage.setItem('activeList', JSON.stringify({
-    id: state.activeListId, name: state.activeListName, count: state.activeListCount
-  }));
-}
-
-function updateActiveBar() {
-  const bar = document.getElementById('active-list-bar');
-  if (state.activeListId) {
-    document.getElementById('active-list-name').textContent = state.activeListName;
-    document.getElementById('active-list-count').textContent = state.activeListCount + '曲';
-    bar.hidden = false;
-  } else {
-    bar.hidden = true;
-  }
-}
-
-// ── ユーティリティ ──
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-
-function addedKey() { return 'added_' + state.activeListId; }
-function isAdded(id) {
-  if (!state.activeListId) return false;
-  try { return JSON.parse(localStorage.getItem(addedKey()) || '[]').includes(id); } catch { return false; }
-}
-function markAdded(id) {
-  const key = addedKey();
-  try {
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    if (!arr.includes(id)) { arr.push(id); localStorage.setItem(key, JSON.stringify(arr)); }
-  } catch {}
-}
-
-// ── 曲一覧取得・描画 ──
-async function fetchSongs() {
-  const params = new URLSearchParams({ page: state.page });
-  if (state.q)   params.set('q',   state.q);
-  if (state.tag) params.set('tag', state.tag);
-
-  document.getElementById('song-list').innerHTML = '<div class="list-msg">読み込み中…</div>';
-
-  const res  = await fetch('api/songs.php?' + params);
-  const data = await res.json();
-  renderSongs(data);
-}
-
-function renderSongs(data) {
-  const el = document.getElementById('song-list');
-  if (!data.songs.length) {
-    el.innerHTML = '<div class="list-msg">曲が見つかりません</div>';
-    document.getElementById('pagination').innerHTML = '';
-    return;
-  }
-
-  el.innerHTML = data.songs.map(s => {
-    const added = isAdded(s.id);
-    const meta  = [esc(s.artist_name || '—'), s.release_year].filter(Boolean).join(' · ');
-    const ytBtn = s.youtube_url
-      ? `<a class="yt-btn" href="${esc(s.youtube_url)}" target="_blank" rel="noopener" aria-label="試聴">▶</a>`
-      : '';
-    return `<div class="song-card">
-      <div class="song-card-body">
-        <div class="song-title">${esc(s.title)}</div>
-        <div class="song-meta">${meta}</div>
-      </div>
-      ${ytBtn}
-      <button class="add-btn${added ? ' is-added' : ''}" data-id="${s.id}" aria-label="リストに追加">
-        ${added ? '✓' : '＋'}
-      </button>
-    </div>`;
-  }).join('');
-
-  // ページング
-  const pg = document.getElementById('pagination');
-  if (data.pages <= 1) { pg.innerHTML = ''; return; }
-  let html = '<div class="paging">';
-  if (data.page > 1)          html += `<button onclick="gotoPage(${data.page-1})">◀ 前</button>`;
-  html += `<span>${data.page} / ${data.pages}ページ（${data.total}曲）</span>`;
-  if (data.page < data.pages) html += `<button onclick="gotoPage(${data.page+1})">次 ▶</button>`;
-  html += '</div>';
-  pg.innerHTML = html;
-}
-
-function gotoPage(n) {
-  state.page = n;
-  fetchSongs();
-  document.getElementById('song-area').scrollTop = 0;
-}
-
-// ── リストに追加 ──
-async function addSong(songId) {
-  if (!state.activeListId) { openPicker(songId); return; }
-
-  const fd = new FormData();
-  fd.append('action', 'add_song');
-  fd.append('songlist_id', state.activeListId);
-  fd.append('song_id', songId);
-
-  const res  = await fetch('api/songlist.php', { method: 'POST', body: fd });
-  const data = await res.json();
-  if (!data.ok) return;
-
-  state.activeListCount = data.data.count;
-  saveActiveList();
-  updateActiveBar();
-  markAdded(songId);
-
-  const btn = document.querySelector(`.add-btn[data-id="${songId}"]`);
-  if (btn) { btn.textContent = '✓'; btn.classList.add('is-added'); }
-}
-
-// イベント委任（曲リスト）
-document.getElementById('song-list').addEventListener('click', e => {
-  const btn = e.target.closest('.add-btn');
-  if (btn) addSong(parseInt(btn.dataset.id));
-});
-
-// ── 検索 ──
-const qInput = document.getElementById('q');
-qInput.addEventListener('input', debounce(e => {
-  state.q = e.target.value.trim();
-  state.page = 1;
-  document.getElementById('clear-btn').hidden = !state.q;
-  fetchSongs();
-}, 300));
-
-document.getElementById('clear-btn').addEventListener('click', () => {
-  state.q = ''; qInput.value = '';
-  document.getElementById('clear-btn').hidden = true;
-  fetchSongs();
-});
-
-// ── タグフィルター ──
-document.getElementById('tag-bar').addEventListener('click', e => {
-  const pill = e.target.closest('.tag-pill');
-  if (!pill) return;
-  document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('is-active'));
-  pill.classList.add('is-active');
-  state.tag = pill.dataset.tag;
-  state.page = 1;
-  fetchSongs();
-});
-
-// ── リスト選択ダイアログ ──
-let pendingSongId = null;
-
-async function openPicker(songId) {
-  pendingSongId = songId;
-  const res  = await fetch('api/songlist.php?action=list');
-  const data = await res.json();
-  const listEl = document.getElementById('picker-lists');
-  listEl.innerHTML = data.data.length
-    ? data.data.map(sl =>
-        `<button class="picker-item" data-id="${sl.id}" data-name="${esc(sl.name)}" data-count="${sl.song_count}">
-          <span class="picker-name">${esc(sl.name)}</span>
-          <span class="picker-count">${sl.song_count}曲</span>
-        </button>`
-      ).join('')
-    : '<p class="picker-empty">まだリストがありません</p>';
-  document.getElementById('picker-new-name').value = '';
-  document.getElementById('list-picker').showModal();
-}
-
-document.getElementById('picker-lists').addEventListener('click', e => {
-  const btn = e.target.closest('.picker-item');
-  if (!btn) return;
-  state.activeListId    = parseInt(btn.dataset.id);
-  state.activeListName  = btn.dataset.name;
-  state.activeListCount = parseInt(btn.dataset.count);
-  saveActiveList();
-  updateActiveBar();
-  document.getElementById('list-picker').close();
-  if (pendingSongId) { addSong(pendingSongId); pendingSongId = null; }
-});
-
-document.getElementById('picker-new-btn').addEventListener('click', async () => {
-  const name = document.getElementById('picker-new-name').value.trim();
-  if (!name) return;
-  const fd = new FormData();
-  fd.append('action', 'create'); fd.append('name', name);
-  const res  = await fetch('api/songlist.php', { method: 'POST', body: fd });
-  const data = await res.json();
-  if (!data.ok) return;
-  state.activeListId    = data.data.id;
-  state.activeListName  = data.data.name;
-  state.activeListCount = 0;
-  saveActiveList();
-  updateActiveBar();
-  document.getElementById('list-picker').close();
-  if (pendingSongId) { addSong(pendingSongId); pendingSongId = null; }
-});
-
-document.getElementById('picker-cancel').addEventListener('click', () => {
-  document.getElementById('list-picker').close();
-});
-
-// ── 初期化 ──
-initActiveList();
-fetchSongs();
+})();
 </script>
 </body>
 </html>
