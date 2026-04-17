@@ -42,9 +42,11 @@ $artists = $stmt->fetchAll();
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
+<header class="hero-card">
+    <h1>Songs.TNNET</h1>
+    <p class="hero-lead">マイソングブック</p>
+</header>
 <div class="container">
-    <h1>アーティスト一覧</h1>
-
     <nav class="top-nav">
         <a href="index.php">曲一覧</a>
         <a href="artists.php" class="is-active">アーティスト一覧</a>
@@ -65,6 +67,7 @@ $artists = $stmt->fetchAll();
         </div>
     <?php endif; ?>
 
+    <h2>アーティスト一覧</h2>
     <p class="result-meta">検索結果: <?= count($artists) ?> 件<?= $keyword !== '' ? '（条件に一致）' : '（全件）' ?></p>
 
     <?php if (!$artists): ?>
@@ -89,13 +92,5 @@ $artists = $stmt->fetchAll();
         </ul>
     <?php endif; ?>
 </div>
-<script>
-(function () {
-  var theme = localStorage.getItem('songsTheme');
-  if (!theme) return;
-  document.body.classList.remove('theme-cream-a', 'theme-cream-b', 'theme-cream-c');
-  document.body.classList.add(theme);
-})();
-</script>
 </body>
 </html>

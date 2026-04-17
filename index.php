@@ -97,16 +97,14 @@ $quickDecades = $decadeStmt->fetchAll();
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-<div class="container retro-home">
-    <header class="hero-card">
-        <p class="hero-kicker">Songs.TNNET</p>
-        <h1>Songs.TNNET</h1>
-        <p class="hero-lead">探す・選ぶを同じ画面で。スマホでも使いやすいトップへ更新中です。</p>
-        <div class="hero-actions">
-            <a href="builder.php" class="launch-button top-launch-link">楽曲一括Get！</a>
-        </div>
-    </header>
-
+<header class="hero-card">
+    <h1>Songs.TNNET</h1>
+    <p class="hero-lead">マイソングブック</p>
+    <div class="hero-actions">
+        <a href="builder.php" class="launch-button top-launch-link">楽曲一括Get！</a>
+    </div>
+</header>
+<div class="container">
     <nav class="top-nav">
         <a href="index.php" class="is-active">トップ</a>
         <a href="artists.php">アーティスト一覧</a>
@@ -228,13 +226,5 @@ $quickDecades = $decadeStmt->fetchAll();
         <?php endif; ?>
     </section>
 </div>
-<script>
-(function () {
-  var theme = localStorage.getItem('songsTheme');
-  if (!theme) return;
-  document.body.classList.remove('theme-cream-a', 'theme-cream-b', 'theme-cream-c');
-  document.body.classList.add(theme);
-})();
-</script>
 </body>
 </html>

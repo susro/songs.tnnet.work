@@ -65,9 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
+<header class="hero-card">
+    <h1>Songs.TNNET</h1>
+    <p class="hero-lead">マイソングブック</p>
+</header>
 <div class="container">
-    <h1>曲を追加</h1>
-
     <nav class="top-nav">
         <a href="index.php">曲一覧</a>
         <a href="artists.php">アーティスト一覧</a>
@@ -89,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     <?php endif; ?>
 
+    <h2>曲を追加</h2>
     <form method="post" class="search-form">
         <label>曲名: <input type="text" name="title" required value="<?= htmlspecialchars($title) ?>"></label>
         <label>アーティスト: <input type="text" name="artist" required value="<?= htmlspecialchars($artist) ?>"></label>
@@ -96,13 +99,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit">登録</button>
     </form>
 </div>
-<script>
-(function () {
-  var theme = localStorage.getItem('songsTheme');
-  if (!theme) return;
-  document.body.classList.remove('theme-cream-a', 'theme-cream-b', 'theme-cream-c');
-  document.body.classList.add(theme);
-})();
-</script>
 </body>
 </html>
