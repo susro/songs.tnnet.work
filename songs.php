@@ -11,15 +11,23 @@ $tagStmt = $pdo->query("
 ");
 $filterTags = $tagStmt->fetchAll();
 
-$initQ   = trim($_GET['q']   ?? '');
-$initTag = trim($_GET['tag'] ?? '');
+$initQ        = trim($_GET['q']        ?? '');
+$initTag      = trim($_GET['tag']      ?? '');
+$initArtistId = (int)($_GET['artist_id'] ?? 0);
+$initArtistName = '';
+if ($initArtistId > 0) {
+    $aStmt = $pdo->prepare("SELECT name FROM artists WHERE id = ?");
+    $aStmt->execute([$initArtistId]);
+    $initArtistName = (string)($aStmt->fetchColumn() ?: '');
+    if (!$initArtistName) $initArtistId = 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>曲を探す – Songs.TNNET</title>
+<title><?= $initArtistName ? htmlspecialchars($initArtistName) . ' – ' : '' ?>曲を探す – Songs.TNNET</title>
 <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
@@ -29,11 +37,29 @@ $initTag = trim($_GET['tag'] ?? '');
   <div class="main-wrap songs-mode">
     <header class="page-header">
       <span class="page-header-brand">Songs.TNNET</span>
-      <span class="page-title">曲を探す</span>
+      <?php if ($initArtistId && $initArtistName): ?>
+        <a href="artists.php" class="page-back">‹</a>
+        <span class="page-title"><?= htmlspecialchars($initArtistName) ?></span>
+      <?php else: ?>
+        <span class="page-title">曲を探す</span>
+      <?php endif; ?>
       <div class="page-header-right">
         <span id="result-count" class="result-badge"></span>
       </div>
     </header>
+
+    <?php if ($initArtistId && $initArtistName): ?>
+    <!-- アーティスト絞込バー -->
+    <div class="artist-filter-bar">
+      <span class="artist-filter-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </span>
+      <span class="artist-filter-name"><?= htmlspecialchars($initArtistName) ?></span>
+      <a href="songs.php" class="artist-filter-clear">全曲表示</a>
+    </div>
+    <?php endif; ?>
 
     <!-- 検索・タグバー -->
     <div class="search-bar">
@@ -88,8 +114,9 @@ $initTag = trim($_GET['tag'] ?? '');
 
 <script>
 const state = {
-  q:    <?= json_encode($initQ) ?>,
-  tag:  <?= json_encode($initTag) ?>,
+  q:        <?= json_encode($initQ) ?>,
+  tag:      <?= json_encode($initTag) ?>,
+  artistId: <?= json_encode($initArtistId ?: null) ?>,
   page: 1,
   activeListId:    null,
   activeListName:  null,
@@ -134,8 +161,9 @@ const markAdded = id => { try { const k = addedKey(), a = JSON.parse(localStorag
 /* ── 曲取得・描画 ── */
 async function fetchSongs() {
   const p = new URLSearchParams({ page: state.page });
-  if (state.q)   p.set('q',   state.q);
-  if (state.tag) p.set('tag', state.tag);
+  if (state.q)        p.set('q',         state.q);
+  if (state.tag)      p.set('tag',       state.tag);
+  if (state.artistId) p.set('artist_id', state.artistId);
 
   document.getElementById('song-list').innerHTML = '<div class="list-msg">読み込み中…</div>';
   document.getElementById('result-count').textContent = '';
@@ -157,7 +185,14 @@ function renderSongs(data) {
   const offset = (data.page - 1) * 50;
   el.innerHTML = data.songs.map((s, i) => {
     const added = isAdded(s.id);
-    const meta  = [esc(s.artist_name || '—'), s.release_year].filter(Boolean).join(' · ');
+    const metaParts = [];
+    if (!state.artistId && s.artist_name) {
+      metaParts.push(`<a class="song-artist-link" href="artists.php?focus=${s.artist_id}">${esc(s.artist_name)}</a>`);
+    }
+    if (s.release_year) metaParts.push(esc(s.release_year));
+    if (s.dam_number)   metaParts.push(`<span class="dam-num">DAM●${esc(s.dam_number)}</span>`);
+    const meta = metaParts.join(' · ');
+
     const ytBtn = s.youtube_url
       ? `<a class="yt-btn" href="${esc(s.youtube_url)}" target="_blank" rel="noopener" aria-label="試聴">▶</a>`
       : '';
@@ -165,7 +200,7 @@ function renderSongs(data) {
       <span class="song-card-num">${offset + i + 1}</span>
       <div class="song-card-body">
         <div class="song-title">${esc(s.title)}</div>
-        <div class="song-meta">${meta}</div>
+        <div class="song-meta">${meta || '—'}</div>
       </div>
       ${ytBtn}
       <button class="add-btn${added ? ' is-added' : ''}" data-id="${s.id}" aria-label="リストに追加">${added ? '✓' : '＋'}</button>

@@ -628,6 +628,156 @@ button { cursor: pointer; font-family: inherit; }
 .dialog-cancel:hover { background: var(--bg); }
 
 /* ═══════════════════════════════════════════════
+   ARTISTS  (artists.php)
+   ═══════════════════════════════════════════════ */
+
+/* artists-mode: fixed-height app (same pattern as songs-mode) */
+.main-wrap.artists-mode {
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.artist-search-bar { padding-bottom: 10px; }
+
+/* アーティストリスト全体スクロール */
+.artist-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg);
+}
+
+/* 頭文字グループ */
+.artist-group-head {
+  padding: 6px 16px 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--border);
+}
+
+/* アーティストカード（デンモク風：大きなタップ領域） */
+.artist-card {
+  display: flex;
+  align-items: center;
+  padding: 13px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  gap: 13px;
+  text-decoration: none;
+  color: var(--text);
+  min-height: 66px;
+  transition: background 0.08s;
+  -webkit-tap-highlight-color: transparent;
+}
+.artist-card:hover { background: var(--blue-light); text-decoration: none; }
+.artist-card:active { background: #d6e6f8; }
+.artist-card.is-focus { background: var(--blue-light); box-shadow: inset 3px 0 0 var(--blue); }
+
+/* アバター円 */
+.artist-card-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue-light) 0%, #c8d8f4 100%);
+  color: var(--blue-dark);
+  font-size: 18px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.artist-card-body { flex: 1; min-width: 0; }
+.artist-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.artist-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.artist-song-count {
+  font-size: 12px;
+  color: var(--blue-dark);
+  font-weight: 700;
+  background: var(--blue-light);
+  border-radius: 8px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.artist-tag-chip {
+  font-size: 11px;
+  color: var(--text-sub);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.artist-card-arrow {
+  font-size: 20px;
+  color: var(--border-dark);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   SONGS – 追加スタイル
+   ═══════════════════════════════════════════════ */
+
+/* アーティスト絞込バー（artist_id フィルター時） */
+.artist-filter-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #ece5f6;
+  border-bottom: 1px solid #c4a8e8;
+  font-size: 13px;
+}
+.artist-filter-icon { color: #6633bb; flex-shrink: 0; display: flex; align-items: center; }
+.artist-filter-name { flex: 1; font-weight: 700; color: #4422aa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.artist-filter-clear { color: #6633bb; font-size: 12px; white-space: nowrap; font-weight: 600; }
+.artist-filter-clear:hover { text-decoration: underline; }
+
+/* DAM番号バッジ */
+.dam-num {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 曲メタ内アーティストリンク */
+.song-artist-link {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.song-artist-link:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════
    ADMIN / LEGACY PAGES
    ═══════════════════════════════════════════════ */
 .container { max-width: 980px; margin: 0 auto; padding: 0 16px 40px; }
@@ -742,7 +892,8 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
   .sidebar              { display: none; }
   .bottom-nav           { display: flex; }
   .main-wrap            { padding-bottom: var(--nav-h); }
-  .main-wrap.songs-mode { height: calc(100dvh - var(--nav-h)); height: calc(100vh - var(--nav-h)); }
+  .main-wrap.songs-mode   { height: calc(100dvh - var(--nav-h)); height: calc(100vh - var(--nav-h)); }
+  .main-wrap.artists-mode { height: calc(100dvh - var(--nav-h)); height: calc(100vh - var(--nav-h)); }
   .page-header-brand    { display: block; }
   .page-body            { padding: 14px; }
   .action-grid          { gap: 10px; }

@@ -39,6 +39,6 @@ function icon(string $name): string {
 <nav class="bottom-nav">
   <a href="index.php"     class="bottom-nav-item<?= _nav_cls('home',    $_active) ?>"><?= icon('home')   ?><span class="nav-label">ホーム</span></a>
   <a href="songs.php"     class="bottom-nav-item<?= _nav_cls('songs',   $_active) ?>"><?= icon('music')  ?><span class="nav-label">曲を探す</span></a>
+  <a href="artists.php"   class="bottom-nav-item<?= _nav_cls('artists', $_active) ?>"><?= icon('user')   ?><span class="nav-label">アーティスト</span></a>
   <a href="songlists.php" class="bottom-nav-item<?= _nav_cls('lists',   $_active) ?>"><?= icon('list')   ?><span class="nav-label">リスト</span></a>
-  <a href="builder.php"   class="bottom-nav-item<?= _nav_cls('builder', $_active) ?>"><?= icon('tool')   ?><span class="nav-label">Builder</span></a>
 </nav>

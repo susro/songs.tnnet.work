@@ -2,11 +2,12 @@
 require_once '../config.php';
 header('Content-Type: application/json; charset=utf-8');
 
-$q    = trim($_GET['q']   ?? '');
-$tag  = trim($_GET['tag'] ?? '');
-$page = max(1, (int)($_GET['page'] ?? 1));
-$per  = 50;
-$off  = ($page - 1) * $per;
+$q        = trim($_GET['q']        ?? '');
+$tag      = trim($_GET['tag']      ?? '');
+$artistId = (int)($_GET['artist_id'] ?? 0);
+$page     = max(1, (int)($_GET['page'] ?? 1));
+$per      = 50;
+$off      = ($page - 1) * $per;
 
 $where  = [];
 $params = [];
@@ -15,6 +16,11 @@ if ($q !== '') {
     $where[]  = '(s.title LIKE ? OR a.name LIKE ?)';
     $params[] = "%$q%";
     $params[] = "%$q%";
+}
+
+if ($artistId > 0) {
+    $where[]  = 's.artist_id = ?';
+    $params[] = $artistId;
 }
 
 $from = "FROM songs s LEFT JOIN artists a ON s.artist_id = a.id";
@@ -33,7 +39,8 @@ $cntStmt->execute($params);
 $total = (int)$cntStmt->fetchColumn();
 
 $dataStmt = $pdo->prepare(
-    "SELECT DISTINCT s.id, s.title, s.release_year, s.youtube_url, a.name AS artist_name
+    "SELECT DISTINCT s.id, s.title, s.release_year, s.youtube_url, s.dam_number,
+            a.id AS artist_id, a.name AS artist_name
      $from $wc ORDER BY s.release_year DESC, s.id DESC LIMIT $per OFFSET $off"
 );
 $dataStmt->execute($params);
