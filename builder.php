@@ -133,7 +133,9 @@ if ($runAddInvite) {
     if (preg_match('/^\d{6}$/', $invCode)) {
         try {
             $pdo->prepare("INSERT INTO users (name, invite_code) VALUES (?, ?)")->execute(['（未設定）', $invCode]);
-            $successMessage = "招待コード {$invCode} を発行しました。";
+            $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $inviteUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . '/register.php?code=' . $invCode;
+            $successMessage = "招待コード {$invCode} を発行しました。招待URL: {$inviteUrl}";
         } catch (PDOException $e) {
             $errorMessage = 'そのコードはすでに使われています。別のコードで試してください。';
         }
@@ -240,13 +242,15 @@ if ($runAddArtist) {
             <?php foreach ($userList as $u): ?>
                 <tr>
                     <td><?= htmlspecialchars($u['name']) ?></td>
-                    <td style="display:flex;align-items:center;gap:6px">
-                        <code><?= htmlspecialchars($u['invite_code']) ?></code>
-                        <button type="button" class="copy-invite-btn"
-                                data-code="<?= htmlspecialchars($u['invite_code']) ?>"
-                                style="height:24px;padding:0 8px;font-size:11px;border:1px solid var(--border-dark);border-radius:3px;background:#fff;color:var(--blue);cursor:pointer;white-space:nowrap">
-                            📋 コピー
-                        </button>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <code><?= htmlspecialchars($u['invite_code']) ?></code>
+                            <button type="button" class="copy-invite-btn"
+                                    data-code="<?= htmlspecialchars($u['invite_code']) ?>"
+                                    style="height:24px;padding:0 8px;font-size:11px;border:1px solid var(--border-dark);border-radius:3px;background:#fff;color:var(--blue);cursor:pointer;white-space:nowrap">
+                                📋 コピー
+                            </button>
+                        </div>
                     </td>
                     <td><?= $u['is_admin'] ? '管理者' : 'メンバー' ?></td>
                     <td><?= date('Y/m/d', strtotime($u['created_at'])) ?></td>
