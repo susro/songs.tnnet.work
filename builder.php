@@ -240,7 +240,14 @@ if ($runAddArtist) {
             <?php foreach ($userList as $u): ?>
                 <tr>
                     <td><?= htmlspecialchars($u['name']) ?></td>
-                    <td><code><?= htmlspecialchars($u['invite_code']) ?></code></td>
+                    <td style="display:flex;align-items:center;gap:6px">
+                        <code><?= htmlspecialchars($u['invite_code']) ?></code>
+                        <button type="button" class="copy-invite-btn"
+                                data-code="<?= htmlspecialchars($u['invite_code']) ?>"
+                                style="height:24px;padding:0 8px;font-size:11px;border:1px solid var(--border-dark);border-radius:3px;background:#fff;color:var(--blue);cursor:pointer;white-space:nowrap">
+                            📋 コピー
+                        </button>
+                    </td>
                     <td><?= $u['is_admin'] ? '管理者' : 'メンバー' ?></td>
                     <td><?= date('Y/m/d', strtotime($u['created_at'])) ?></td>
                     <td>
@@ -623,6 +630,20 @@ document.getElementById('add-artist-result-dialog').showModal();
 <?php endif; ?>
 document.getElementById('close-add-artist-result').addEventListener('click', function () {
   document.getElementById('add-artist-result-dialog').close();
+});
+
+/* ── 既存招待コードのコピー ── */
+document.querySelectorAll('.copy-invite-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var code = btn.dataset.code;
+    var url  = location.origin + '/register.php?code=' + code;
+    navigator.clipboard.writeText(url).then(function () {
+      var orig = btn.textContent;
+      btn.textContent = '✓ コピー済';
+      btn.style.color = 'var(--green)';
+      setTimeout(function () { btn.textContent = orig; btn.style.color = ''; }, 2000);
+    });
+  });
 });
 
 /* ── 招待URL生成 ── */

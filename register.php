@@ -138,13 +138,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <label class="reg-label">ニックネーム</label>
       <input type="text" name="name" class="reg-input"
              placeholder="自分の名前を入力" maxlength="50" required
-             autocomplete="nickname"
+             autocomplete="username"
              value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
 
       <label class="reg-label">招待コード</label>
-      <input type="text" name="invite_code" class="reg-input"
+      <input type="password" name="invite_code" class="reg-input"
              placeholder="6桁の数字" maxlength="6" required
-             autocomplete="off" inputmode="numeric"
+             autocomplete="current-password" inputmode="numeric"
              value="<?= htmlspecialchars($preCode ?: ($_POST['invite_code'] ?? '')) ?>"
              <?= $preCode ? 'readonly style="background:#f0f3f8;color:var(--text-muted)"' : '' ?>>
 
