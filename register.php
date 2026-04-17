@@ -143,8 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <label class="reg-label">招待コード</label>
       <input type="password" name="invite_code" class="reg-input"
-             placeholder="6桁の数字" maxlength="6" required
-             autocomplete="current-password" inputmode="numeric"
+             placeholder="招待コード" maxlength="64" required
+             autocomplete="current-password"
              value="<?= htmlspecialchars($preCode ?: ($_POST['invite_code'] ?? '')) ?>"
              <?= $preCode ? 'readonly style="background:#f0f3f8;color:var(--text-muted)"' : '' ?>>
 
