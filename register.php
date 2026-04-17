@@ -34,20 +34,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
 <title>参加登録 – Songs.TNNET</title>
 <link rel="stylesheet" href="assets/app.css">
 <style>
+  :root { color-scheme: light; }
   .register-wrap {
     min-height: 100dvh;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     padding: 24px 20px;
-    background: var(--bg);
+    background: #f0f3f8;
   }
   .register-card {
     width: 100%; max-width: 380px;
-    background: #fff;
-    border: 1px solid var(--border);
+    background: #ffffff;
+    color: #18202e;
+    border: 1px solid #d0d8e6;
     border-radius: 16px;
     padding: 32px 28px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
@@ -66,30 +69,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .register-logo-mark svg { width: 28px; height: 28px; color: #fff; }
   .register-title {
     font-size: 20px; font-weight: 800;
-    color: var(--text);
+    color: #18202e;
     margin: 0 0 4px;
     text-align: center;
   }
   .register-sub {
-    font-size: 12px; color: var(--text-muted);
+    font-size: 12px; color: #8a9daf;
     text-align: center; margin: 0 0 28px;
   }
   .reg-label {
     display: block;
     font-size: 12px; font-weight: 700;
-    color: var(--text-sub);
+    color: #526070;
     margin-bottom: 5px;
     letter-spacing: 0.04em;
   }
   .reg-input {
     display: block; width: 100%;
     height: 44px;
-    border: 1.5px solid var(--border-dark);
+    border: 1.5px solid #98aac0;
     border-radius: 8px;
     padding: 0 14px;
     font-size: 15px;
-    background: var(--bg);
-    color: var(--text);
+    background: #f0f3f8;
+    color: #18202e;
     outline: none;
     margin-bottom: 16px;
   }
