@@ -180,7 +180,7 @@ document.getElementById('detail-song-list')?.addEventListener('click', async e =
 
 document.querySelector('.set-active-btn')?.addEventListener('click', e => {
   const btn = e.currentTarget;
-  localStorage.setItem('activeList', JSON.stringify({
+  localStorage.setItem('activeList_<?= (int)$me['id'] ?>', JSON.stringify({
     id: parseInt(btn.dataset.id), name: btn.dataset.name, count: parseInt(btn.dataset.count),
   }));
   btn.textContent = '✓ アクティブに設定しました';

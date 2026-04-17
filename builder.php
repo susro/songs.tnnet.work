@@ -1,7 +1,7 @@
 <?php
 require_once 'config.php';
 require_once 'fetch_helpers.php';
-session_start();
+$me = require_admin();
 
 $keyword = trim((string)($_POST['filter_keyword'] ?? $_GET['q'] ?? ''));
 $selectedTagsInitial = array_values(array_filter(array_unique(explode('|', trim((string)($_POST['selected_tags'] ?? ''))))));
@@ -10,7 +10,9 @@ $action = (string)($_POST['action'] ?? '');
 $runPrepare = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'prepare_fetch';
 $runCommit = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'commit_fetch';
 $runClearSession = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'clear_fetch_session';
-$runAddArtist = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_artist';
+$runAddArtist  = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_artist';
+$runAddInvite  = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_invite';
+$runDelInvite  = $_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'del_invite';
 $results = [];
 $importCandidates = $_SESSION['builder_fetch_candidates'] ?? [];
 $errorMessage = '';
@@ -125,6 +127,34 @@ $stmt->execute($params);
 $artists = $stmt->fetchAll();
 $tagGroups = $buildTagGroups($artists);
 
+/* ── 招待コード追加 ── */
+if ($runAddInvite) {
+    $invName = mb_substr(trim((string)($_POST['inv_name'] ?? '')), 0, 50);
+    $invCode = trim((string)($_POST['inv_code'] ?? ''));
+    if ($invName !== '' && preg_match('/^[\w\-]{4,32}$/', $invCode)) {
+        try {
+            $pdo->prepare("INSERT INTO users (name, invite_code) VALUES (?, ?)")->execute([$invName, $invCode]);
+            $successMessage = "「{$invName}」を招待しました。";
+        } catch (PDOException $e) {
+            $errorMessage = 'そのコードはすでに使われています。';
+        }
+    } else {
+        $errorMessage = '名前（必須）とコード（英数字・ハイフン 4〜32文字）を入力してください。';
+    }
+}
+
+/* ── 招待コード削除 ── */
+if ($runDelInvite) {
+    $delId = (int)($_POST['del_id'] ?? 0);
+    if ($delId && $delId !== (int)$me['id']) {
+        $pdo->prepare("DELETE FROM users WHERE id = ? AND is_admin = 0")->execute([$delId]);
+        $successMessage = 'ユーザーを削除しました。';
+    }
+}
+
+/* ── ユーザー一覧（招待管理用） ── */
+$userList = $pdo->query("SELECT id, name, invite_code, is_admin, created_at FROM users ORDER BY id ASC")->fetchAll();
+
 if ($runAddArtist) {
     $newArtistName = trim((string)($_POST['new_artist_name'] ?? ''));
     $confirmVariant = (string)($_POST['confirm_variant'] ?? '') === '1';
@@ -195,14 +225,51 @@ if ($runAddArtist) {
         <a href="import_history.php">取り込み履歴</a>
     </nav>
 
+    <!-- ── 招待コード管理 ── -->
+    <section class="panel-card" style="margin-bottom:16px">
+        <h2>メンバー管理</h2>
+        <?php if ($errorMessage): ?>
+            <div class="error-box"><?= htmlspecialchars($errorMessage) ?></div>
+        <?php endif; ?>
+        <?php if ($successMessage): ?>
+            <div class="success-box"><?= htmlspecialchars($successMessage) ?></div>
+        <?php endif; ?>
+
+        <table class="data-table" style="margin-bottom:14px">
+            <thead><tr><th>名前</th><th>招待コード</th><th>権限</th><th>登録日</th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($userList as $u): ?>
+                <tr>
+                    <td><?= htmlspecialchars($u['name']) ?></td>
+                    <td><code><?= htmlspecialchars($u['invite_code']) ?></code></td>
+                    <td><?= $u['is_admin'] ? '管理者' : 'メンバー' ?></td>
+                    <td><?= date('Y/m/d', strtotime($u['created_at'])) ?></td>
+                    <td>
+                        <?php if (!$u['is_admin']): ?>
+                        <form method="post" style="display:inline" onsubmit="return confirm('削除しますか？')">
+                            <input type="hidden" name="action"  value="del_invite">
+                            <input type="hidden" name="del_id" value="<?= $u['id'] ?>">
+                            <button class="btn-danger" style="height:28px;font-size:12px;padding:0 10px">削除</button>
+                        </form>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <form method="post" class="search-form">
+            <input type="hidden" name="action" value="add_invite">
+            <input type="text"   name="inv_name" placeholder="名前"   maxlength="50" style="width:140px" required>
+            <input type="text"   name="inv_code" placeholder="招待コード（英数字・ハイフン）" maxlength="32" style="width:220px" required autocomplete="off">
+            <button type="submit" class="search-form button" style="height:30px;padding:0 14px;background:var(--blue);color:#fff;border:none;border-radius:3px;font-weight:700">招待追加</button>
+        </form>
+    </section>
+
     <section class="panel-card">
         <h2>まとめて楽曲Get！</h2>
 
-        <?php if ($errorMessage): ?>
-            <div class="error-box"><?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?></div>
-        <?php endif; ?>
-        <?php if ($successMessage): ?>
-            <div class="success-box"><?php echo htmlspecialchars($successMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php if (!$errorMessage && !$successMessage): // 上で表示済みのため ?>
         <?php endif; ?>
 
         <div class="search-form">

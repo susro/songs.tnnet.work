@@ -1,6 +1,6 @@
 <?php
 require_once 'config.php';
-require_login();
+$me = require_login();
 
 // フィルターバー用タグ
 $tagStmt = $pdo->query("
@@ -114,6 +114,7 @@ if ($initArtistId > 0) {
 </dialog>
 
 <script>
+const ACTIVE_KEY = 'activeList_<?= (int)$me['id'] ?>';
 const state = {
   q:        <?= json_encode($initQ) ?>,
   tag:      <?= json_encode($initTag) ?>,
@@ -127,7 +128,7 @@ const state = {
 /* ── アクティブリスト ── */
 function initActiveList() {
   try {
-    const s = JSON.parse(localStorage.getItem('activeList') || 'null');
+    const s = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null');
     if (s && s.id) {
       state.activeListId    = s.id;
       state.activeListName  = s.name;
@@ -137,7 +138,7 @@ function initActiveList() {
   } catch {}
 }
 function saveActiveList() {
-  localStorage.setItem('activeList', JSON.stringify({
+  localStorage.setItem(ACTIVE_KEY, JSON.stringify({
     id: state.activeListId, name: state.activeListName, count: state.activeListCount,
   }));
 }

@@ -152,7 +152,8 @@ $ico = [
 <script>
 (function () {
   try {
-    const s = JSON.parse(localStorage.getItem('activeList') || 'null');
+    const key = 'activeList_<?= (int)$me['id'] ?>';
+    const s = JSON.parse(localStorage.getItem(key) || 'null');
     if (!s || !s.id) return;
     const card = document.getElementById('home-active-list');
     card.classList.replace('no-list', 'has-list');
