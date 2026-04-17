@@ -47,13 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     background: #f0f3f8;
   }
   .register-card {
-    width: 100%; max-width: 380px;
+    width: 100%; max-width: 380px; box-sizing: border-box;
     background: #ffffff;
     color: #18202e;
     border: 1px solid #d0d8e6;
     border-radius: 16px;
     padding: 32px 28px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
   }
   .register-logo {
     text-align: center;
@@ -85,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     letter-spacing: 0.04em;
   }
   .reg-input {
-    display: block; width: 100%;
+    display: block; width: 100%; box-sizing: border-box;
     height: 44px;
     border: 1.5px solid #98aac0;
     border-radius: 8px;
@@ -95,26 +96,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     color: #18202e;
     outline: none;
     margin-bottom: 16px;
+    -webkit-appearance: none;
   }
-  .reg-input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(0,85,200,0.1); }
+  .reg-input:focus { border-color: #0055c8; background: #fff; box-shadow: 0 0 0 3px rgba(0,85,200,0.1); }
   .reg-btn {
-    display: block; width: 100%;
+    display: block; width: 100%; box-sizing: border-box;
     height: 46px;
-    background: var(--blue); color: #fff;
+    background: #0055c8; color: #fff;
     border: none; border-radius: 8px;
     font-size: 15px; font-weight: 800;
     cursor: pointer;
     margin-top: 4px;
   }
-  .reg-btn:hover { background: var(--blue-dark); }
+  .reg-btn:hover { background: #003d94; }
   .reg-error {
-    background: var(--red-bg);
+    background: #fde8ec;
     border: 1px solid #f0a0b0;
     border-radius: 6px;
     padding: 10px 12px;
     margin-bottom: 16px;
     font-size: 13px;
-    color: var(--red);
+    color: #c0001e;
   }
 </style>
 </head>
