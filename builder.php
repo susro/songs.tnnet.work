@@ -129,17 +129,16 @@ $tagGroups = $buildTagGroups($artists);
 
 /* ── 招待コード追加 ── */
 if ($runAddInvite) {
-    $invName = mb_substr(trim((string)($_POST['inv_name'] ?? '')), 0, 50);
     $invCode = trim((string)($_POST['inv_code'] ?? ''));
-    if ($invName !== '' && preg_match('/^[\w\-]{4,32}$/', $invCode)) {
+    if (preg_match('/^\d{6}$/', $invCode)) {
         try {
-            $pdo->prepare("INSERT INTO users (name, invite_code) VALUES (?, ?)")->execute([$invName, $invCode]);
-            $successMessage = "「{$invName}」を招待しました。";
+            $pdo->prepare("INSERT INTO users (name, invite_code) VALUES (?, ?)")->execute(['（未設定）', $invCode]);
+            $successMessage = "招待コード {$invCode} を発行しました。";
         } catch (PDOException $e) {
-            $errorMessage = 'そのコードはすでに使われています。';
+            $errorMessage = 'そのコードはすでに使われています。別のコードで試してください。';
         }
     } else {
-        $errorMessage = '名前（必須）とコード（英数字・ハイフン 4〜32文字）を入力してください。';
+        $errorMessage = '招待コードが不正です（6桁の数字）。';
     }
 }
 
@@ -258,12 +257,19 @@ if ($runAddArtist) {
             </tbody>
         </table>
 
-        <form method="post" class="search-form">
-            <input type="hidden" name="action" value="add_invite">
-            <input type="text"   name="inv_name" placeholder="名前"   maxlength="50" style="width:140px" required>
-            <input type="text"   name="inv_code" placeholder="招待コード（英数字・ハイフン）" maxlength="32" style="width:220px" required autocomplete="off">
-            <button type="submit" class="search-form button" style="height:30px;padding:0 14px;background:var(--blue);color:#fff;border:none;border-radius:3px;font-weight:700">招待追加</button>
+        <form method="post" id="invite-form" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input type="hidden" name="action"   value="add_invite">
+            <input type="hidden" name="inv_code" id="inv-code-hidden">
+            <div id="invite-url-box" style="display:none;background:#f0f3f8;border:1px solid #d0d8e6;border-radius:5px;padding:7px 12px;font-size:12px;font-family:monospace;flex:1;min-width:0;word-break:break-all" id="invite-url-display"></div>
+            <button type="button" id="gen-invite-btn"
+                    style="height:30px;padding:0 14px;background:var(--blue);color:#fff;border:none;border-radius:3px;font-weight:700;white-space:nowrap">
+                招待URLを生成
+            </button>
+            <button type="submit" id="invite-submit-btn" style="display:none;height:30px;padding:0 14px;background:var(--green);color:#fff;border:none;border-radius:3px;font-weight:700;white-space:nowrap">
+                確定して登録
+            </button>
         </form>
+        <div id="invite-copy-msg" style="display:none;margin-top:6px;font-size:12px;color:var(--green);font-weight:700">✓ 招待URLをクリップボードにコピーしました</div>
     </section>
 
     <section class="panel-card">
@@ -617,6 +623,24 @@ document.getElementById('add-artist-result-dialog').showModal();
 <?php endif; ?>
 document.getElementById('close-add-artist-result').addEventListener('click', function () {
   document.getElementById('add-artist-result-dialog').close();
+});
+
+/* ── 招待URL生成 ── */
+document.getElementById('gen-invite-btn').addEventListener('click', function () {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const url  = location.origin + '/register.php?code=' + code;
+
+  document.getElementById('inv-code-hidden').value = code;
+  const box = document.getElementById('invite-url-box');
+  box.textContent = url;
+  box.style.display = 'block';
+  document.getElementById('invite-submit-btn').style.display = 'inline-block';
+
+  navigator.clipboard.writeText(url).then(function () {
+    document.getElementById('invite-copy-msg').style.display = 'block';
+  }).catch(function () {
+    /* クリップボード不可環境では手動コピー */
+  });
 });
 </script>
 </body>

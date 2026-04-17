@@ -8,8 +8,9 @@ if (current_user()) {
     exit;
 }
 
-$next  = preg_replace('/[^\/\w\-\.\?=&%]/', '', $_GET['next'] ?? 'index.php');
-$error = '';
+$next      = preg_replace('/[^\/\w\-\.\?=&%]/', '', $_GET['next'] ?? 'index.php');
+$preCode   = preg_replace('/[^\d]/', '', $_GET['code'] ?? '');
+$error     = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $code = trim($_POST['invite_code'] ?? '');
@@ -142,9 +143,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <label class="reg-label">招待コード</label>
       <input type="text" name="invite_code" class="reg-input"
-             placeholder="招待コードを入力" maxlength="64" required
-             autocomplete="off" autocapitalize="none" spellcheck="false"
-             value="">
+             placeholder="6桁の数字" maxlength="6" required
+             autocomplete="off" inputmode="numeric"
+             value="<?= htmlspecialchars($preCode ?: ($_POST['invite_code'] ?? '')) ?>"
+             <?= $preCode ? 'readonly style="background:#f0f3f8;color:var(--text-muted)"' : '' ?>>
 
       <button type="submit" class="reg-btn">参加する</button>
     </form>
