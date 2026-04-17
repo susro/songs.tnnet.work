@@ -1,13 +1,14 @@
 <?php
 require_once 'config.php';
+$me = require_login();
 
 $id     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $detail = null;
 $detailSongs = [];
 
 if ($id) {
-    $s = $pdo->prepare("SELECT * FROM songlists WHERE id = ?");
-    $s->execute([$id]);
+    $s = $pdo->prepare("SELECT * FROM songlists WHERE id = ? AND user_id = ?");
+    $s->execute([$id, $me['id']]);
     $detail = $s->fetch();
     if ($detail) {
         $ss = $pdo->prepare("
@@ -24,13 +25,15 @@ if ($id) {
 }
 
 if (!$detail) {
-    $listStmt = $pdo->query("
+    $listStmt = $pdo->prepare("
         SELECT sl.id, sl.name, sl.memo, sl.updated_at,
                COUNT(ss.song_id) AS song_count
         FROM songlists sl
         LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id
+        WHERE sl.user_id = ?
         GROUP BY sl.id ORDER BY sl.updated_at DESC
     ");
+    $listStmt->execute([$me['id']]);
     $lists = $listStmt->fetchAll();
 }
 ?>

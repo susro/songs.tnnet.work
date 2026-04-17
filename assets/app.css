@@ -108,6 +108,15 @@ button { cursor: pointer; font-family: inherit; }
 .sidebar-divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 6px 0; }
 .sidebar-footer  { border-top: 1px solid rgba(255,255,255,0.07); padding: 6px 0 10px; }
 
+.sidebar-user {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 18px;
+  font-size: 12px;
+}
+.sidebar-user-name { color: rgba(255,255,255,0.75); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-logout    { color: rgba(255,255,255,0.4); font-size: 11px; flex-shrink: 0; margin-left: 8px; }
+.sidebar-logout:hover { color: rgba(255,255,255,0.75); text-decoration: none; }
+
 /* ─── Main wrapper ───────────────────────────── */
 .main-wrap {
   flex: 1;

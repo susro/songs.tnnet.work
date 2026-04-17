@@ -2,6 +2,7 @@
 require_once '../config.php';
 header('Content-Type: application/json; charset=utf-8');
 
+$me = require_login();
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 function ok(mixed $data): never {
@@ -16,17 +17,19 @@ function err(string $msg, int $code = 400): never {
 
 switch ($action) {
 
-    // ---- 全リスト一覧 ----
+    // ---- 全リスト一覧（自分のリストのみ） ----
     case 'list':
-        $rows = $pdo->query("
+        $stmt = $pdo->prepare("
             SELECT sl.id, sl.name, sl.memo,
                    sl.updated_at,
                    COUNT(ss.song_id) AS song_count
             FROM songlists sl
             LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id
+            WHERE sl.user_id = ?
             GROUP BY sl.id ORDER BY sl.updated_at DESC
-        ")->fetchAll();
-        ok($rows);
+        ");
+        $stmt->execute([$me['id']]);
+        ok($stmt->fetchAll());
 
     // ---- リスト内の曲一覧 ----
     case 'songs':
@@ -48,14 +51,14 @@ switch ($action) {
     case 'create':
         $name = trim($_POST['name'] ?? '');
         if ($name === '') err('リスト名が必要です');
-        $pdo->prepare("INSERT INTO songlists (name) VALUES (?)")->execute([$name]);
+        $pdo->prepare("INSERT INTO songlists (user_id, name) VALUES (?, ?)")->execute([$me['id'], $name]);
         ok(['id' => (int)$pdo->lastInsertId(), 'name' => $name, 'song_count' => 0]);
 
-    // ---- リスト削除 ----
+    // ---- リスト削除（自分のリストのみ） ----
     case 'delete':
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) err('IDが必要');
-        $pdo->prepare("DELETE FROM songlists WHERE id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM songlists WHERE id = ? AND user_id = ?")->execute([$id, $me['id']]);
         ok(true);
 
     // ---- 曲を追加 ----

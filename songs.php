@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_login();
 
 // フィルターバー用タグ
 $tagStmt = $pdo->query("

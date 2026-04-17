@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+$me = require_login();
 
 $recentStmt = $pdo->query("
     SELECT s.id, s.title, s.release_year, a.name AS artist_name

@@ -32,3 +32,5 @@ try {
 } catch (PDOException $e) {
     die("DB接続エラー: " . $e->getMessage());
 }
+
+require_once __DIR__ . '/auth.php';

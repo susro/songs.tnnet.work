@@ -32,6 +32,14 @@ function icon(string $name): string {
     <hr class="sidebar-divider">
   </nav>
   <div class="sidebar-footer">
+    <?php if (!empty($_active) || true): $__u = current_user(); ?>
+    <?php if ($__u): ?>
+    <div class="sidebar-user">
+      <span class="sidebar-user-name"><?= htmlspecialchars($__u['name']) ?></span>
+      <a href="logout.php" class="sidebar-logout">ログアウト</a>
+    </div>
+    <?php endif; ?>
+    <?php endif; ?>
     <a href="builder.php" class="sidebar-item<?= _nav_cls('builder', $_active) ?>"><span class="sidebar-icon"><?= icon('tool') ?></span>Builder</a>
   </div>
 </aside>

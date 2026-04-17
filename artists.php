@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_login();
 
 $keyword  = trim((string)($_GET['q']     ?? ''));
 $focusId  = (int)($_GET['focus'] ?? 0);  // songs.php からの折り返し用
