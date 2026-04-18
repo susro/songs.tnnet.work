@@ -200,10 +200,10 @@ function renderSongs(data) {
       : '';
     return `<div class="song-card">
       <span class="song-card-num">${offset + i + 1}</span>
-      <div class="song-card-body">
+      <a class="song-card-body" href="song_detail.php?id=${s.id}">
         <div class="song-title">${esc(s.title)}</div>
         <div class="song-meta">${meta || '—'}</div>
-      </div>
+      </a>
       ${ytBtn}
       <button class="add-btn${added ? ' is-added' : ''}" data-id="${s.id}" aria-label="リストに追加">${added ? '✓' : '＋'}</button>
     </div>`;
