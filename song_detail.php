@@ -154,12 +154,7 @@ function copyNum(num, btn) {
 /* ── ソングリスト一覧 ── */
 async function loadLists() {
   const res = await fetch('api/songlist.php?action=list');
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch(e) {
-    document.getElementById('sd-list-area').innerHTML = '<pre style="font-size:11px;color:red;white-space:pre-wrap">' + text.substring(0, 500) + '</pre>';
-    return;
-  }
+  const data = await res.json();
   const area = document.getElementById('sd-list-area');
   const lists = data.data ?? data.lists ?? [];
   if (!lists.length) {
