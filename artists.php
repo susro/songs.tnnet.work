@@ -144,9 +144,9 @@ function qs(array $merge): string {
     <div class="kana-jump-bar" id="kana-jump-bar">
       <?php foreach (ROW_ORDER as $row): ?>
         <?php if (!empty($groups[$row])): ?>
-          <a href="#row-<?= $row ?>" class="kana-jump-btn"><?= $row ?></a>
+          <a href="#row-<?= $row ?>" class="kana-jump-btn" data-row="<?= $row ?>"><?= $row ?></a>
         <?php else: ?>
-          <span class="kana-jump-btn is-empty"><?= $row ?></span>
+          <span class="kana-jump-btn is-empty" data-row="<?= $row ?>"><?= $row ?></span>
         <?php endif; ?>
       <?php endforeach; ?>
     </div>
@@ -194,54 +194,141 @@ function qs(array $merge): string {
 
 <script>
 (function () {
-  const CURSOR_KEY = 'artist_search_cursor';
-  const inp = document.getElementById('artist-q');
-  const frm = document.getElementById('artist-search-form');
+  const ROW_ORDER = ['ア','カ','サ','タ','ナ','ハ','マ','ヤ','ラ','ワ','その他'];
+  const KANA_MAP = {
+    'ア':'ア','イ':'ア','ウ':'ア','エ':'ア','オ':'ア',
+    'カ':'カ','キ':'カ','ク':'カ','ケ':'カ','コ':'カ','ガ':'カ','ギ':'カ','グ':'カ','ゲ':'カ','ゴ':'カ',
+    'サ':'サ','シ':'サ','ス':'サ','セ':'サ','ソ':'サ','ザ':'サ','ジ':'サ','ズ':'サ','ゼ':'サ','ゾ':'サ',
+    'タ':'タ','チ':'タ','ツ':'タ','テ':'タ','ト':'タ','ダ':'タ','ヂ':'タ','ヅ':'タ','デ':'タ','ド':'タ',
+    'ナ':'ナ','ニ':'ナ','ヌ':'ナ','ネ':'ナ','ノ':'ナ',
+    'ハ':'ハ','ヒ':'ハ','フ':'ハ','ヘ':'ハ','ホ':'ハ','バ':'ハ','ビ':'ハ','ブ':'ハ','ベ':'ハ','ボ':'ハ','パ':'ハ','ピ':'ハ','プ':'ハ','ペ':'ハ','ポ':'ハ',
+    'マ':'マ','ミ':'マ','ム':'マ','メ':'マ','モ':'マ',
+    'ヤ':'ヤ','ユ':'ヤ','ヨ':'ヤ',
+    'ラ':'ラ','リ':'ラ','ル':'ラ','レ':'ラ','ロ':'ラ',
+    'ワ':'ワ','ヲ':'ワ','ン':'ワ',
+  };
+  function kanaRow(reading) {
+    if (!reading) return 'その他';
+    return KANA_MAP[[...reading][0]] || 'その他';
+  }
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  const inp    = document.getElementById('artist-q');
+  const area   = document.getElementById('artist-area');
+  const jumpBar = document.getElementById('kana-jump-bar');
+  let currentTag = <?= json_encode($tagFilter) ?>;
   let timer;
 
-  /* カーソル位置を保存してサブミット */
-  function submitWithCursor() {
-    sessionStorage.setItem(CURSOR_KEY, inp.selectionStart);
-    frm.submit();
+  /* ── フォームのサブミットを完全に止める ── */
+  document.getElementById('artist-search-form').addEventListener('submit', e => e.preventDefault());
+
+  /* ── フィルタータブはURLで動作（ページ遷移OK） ── */
+
+  /* ── アーティスト一覧を描画 ── */
+  function renderArtists(artists) {
+    if (!artists.length) {
+      area.innerHTML = '<div class="list-msg">アーティストが見つかりません</div>';
+      if (jumpBar) jumpBar.style.display = 'none';
+      return;
+    }
+
+    const groups = {};
+    ROW_ORDER.forEach(r => groups[r] = []);
+    artists.forEach(a => groups[kanaRow(a.reading || '')].push(a));
+
+    let html = '';
+    ROW_ORDER.forEach(row => {
+      if (!groups[row].length) return;
+      html += `<div class="artist-group" id="row-${row}"><div class="artist-group-head">${esc(row)}行</div>`;
+      groups[row].forEach(a => {
+        const tags = a.tags ? a.tags.split('|').slice(0,3) : [];
+        const chips = tags.map(t => `<span class="artist-tag-chip" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
+        html += `<a href="songs.php?artist_id=${a.id}" class="artist-card" id="artist-${a.id}">
+          <span class="artist-card-avatar" aria-hidden="true">${esc([...a.name][0])}</span>
+          <div class="artist-card-body">
+            <div class="artist-card-name">${esc(a.name)}</div>
+            <div class="artist-card-meta"><span class="artist-song-count">${a.song_count}曲</span>${chips}</div>
+          </div>
+          <span class="artist-card-arrow">›</span></a>`;
+      });
+      html += '</div>';
+    });
+    area.innerHTML = html;
+
+    /* ジャンプバー更新 */
+    if (jumpBar) {
+      const q = inp.value.trim();
+      jumpBar.style.display = q ? 'none' : '';
+      jumpBar.querySelectorAll('.kana-jump-btn').forEach(b => {
+        const row = b.dataset.row;
+        const exists = groups[row] && groups[row].length > 0;
+        b.classList.toggle('is-empty', !exists);
+        if (exists) b.setAttribute('href', '#row-' + row);
+        else b.removeAttribute('href');
+      });
+    }
+
+    initJumpObserver();
+  }
+
+  /* ── API取得 ── */
+  async function fetchArtists() {
+    const q = inp.value.trim();
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (currentTag) params.set('tag', currentTag);
+    const res = await fetch('api/artists.php?' + params);
+    const data = await res.json();
+    renderArtists(data.artists);
   }
 
   inp.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(submitWithCursor, 450);
+    timer = setTimeout(fetchArtists, 300);
   });
 
-  /* ページロード後：カーソル復元 or 末尾 → 常時フォーカス */
-  const savedPos = sessionStorage.getItem(CURSOR_KEY);
-  sessionStorage.removeItem(CURSOR_KEY);
-  inp.focus();
-  if (savedPos !== null && inp.value) {
-    const pos = Math.min(parseInt(savedPos, 10), inp.value.length);
-    inp.setSelectionRange(pos, pos);
-  } else {
-    inp.setSelectionRange(inp.value.length, inp.value.length);
+  /* クリアボタン */
+  const clearBtn = document.querySelector('.search-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', e => {
+      e.preventDefault();
+      inp.value = '';
+      inp.focus();
+      fetchArtists();
+    });
   }
 
-  /* focus アーティストへスクロール */
+  /* ── 50音ジャンプ IntersectionObserver ── */
+  let jumpObserver;
+  function initJumpObserver() {
+    if (jumpObserver) jumpObserver.disconnect();
+    const jumpBtns = jumpBar ? jumpBar.querySelectorAll('.kana-jump-btn[href]') : [];
+    if (!jumpBtns.length) return;
+    jumpObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const row = e.target.id.replace('row-', '');
+          jumpBtns.forEach(b => b.classList.toggle('is-current', b.dataset.row === row));
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '-60px 0px -60% 0px' });
+    document.querySelectorAll('.artist-group[id]').forEach(g => jumpObserver.observe(g));
+  }
+
+  /* ── 初期フォーカス ── */
+  inp.focus();
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+
+  /* ── focus アーティストへスクロール ── */
   const focusId = <?= json_encode($focusId ?: null) ?>;
   if (focusId) {
     const el = document.getElementById('artist-' + focusId);
     if (el) el.scrollIntoView({ block: 'center' });
   }
 
-  /* 50音ジャンプバーのスティッキー中アクティブ表示 */
-  const jumpBtns = document.querySelectorAll('.kana-jump-btn[href]');
-  if (jumpBtns.length) {
-    const groups = [...document.querySelectorAll('.artist-group[id]')];
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          const row = e.target.id.replace('row-', '');
-          jumpBtns.forEach(b => b.classList.toggle('is-current', b.getAttribute('href') === '#row-' + row));
-        }
-      });
-    }, { threshold: 0.1, rootMargin: '-60px 0px -60% 0px' });
-    groups.forEach(g => observer.observe(g));
-  }
+  initJumpObserver();
 })();
 </script>
 </body>
