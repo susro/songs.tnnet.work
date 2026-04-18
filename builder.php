@@ -375,6 +375,20 @@ if ($runAddArtist) {
         </form>
     </section>
 
+    <!-- ── アーティスト最新化 ── -->
+    <section class="panel-card" style="margin-bottom:16px">
+        <h2>アーティストDB最新化</h2>
+        <p style="font-size:13px;color:var(--text-sub);margin:0 0 10px">
+            rockinon.com の邦楽・洋楽アーティスト一覧を取り込みます。半年に一度程度実行すると最新状態を保てます。
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a href="tools/import_rockinon_artists.php?category=1&dry=1" target="_blank" class="link-button">邦楽（ドライラン）</a>
+            <a href="tools/import_rockinon_artists.php?category=2&dry=1" target="_blank" class="link-button">洋楽（ドライラン）</a>
+            <a href="tools/import_rockinon_artists.php?category=1" target="_blank" class="launch-button" onclick="return confirm('邦楽アーティストを取り込みます。よろしいですか？')">邦楽 実行</a>
+            <a href="tools/import_rockinon_artists.php?category=2" target="_blank" class="launch-button" onclick="return confirm('洋楽アーティストを取り込みます。よろしいですか？')">洋楽 実行</a>
+        </div>
+    </section>
+
     <?php if ($results): ?>
         <section class="panel-card">
             <h2>実行結果</h2>

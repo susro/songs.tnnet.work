@@ -657,6 +657,62 @@ button { cursor: pointer; font-family: inherit; }
   background: var(--bg);
 }
 
+/* 邦楽/洋楽フィルタータブ */
+.artist-filter-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 6px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.artist-filter-tab {
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: background 0.1s, color 0.1s;
+}
+.artist-filter-tab.is-active {
+  color: var(--blue);
+  background: var(--blue-light);
+  border-color: var(--blue);
+}
+.artist-filter-tab.tag-jpop.is-active   { color: #b84000; background: #fff0e6; border-color: #f5b07a; }
+.artist-filter-tab.tag-western.is-active { color: #1555a0; background: #e6f0ff; border-color: #7aaaf5; }
+
+/* 50音ジャンプバー */
+.kana-jump-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.kana-jump-btn {
+  min-width: 32px;
+  padding: 3px 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-sub);
+  text-decoration: none;
+  transition: background 0.1s;
+}
+.kana-jump-btn:hover   { background: var(--blue-light); color: var(--blue); }
+.kana-jump-btn.is-current { background: var(--blue); color: #fff; border-color: var(--blue); }
+.kana-jump-btn.is-empty { color: var(--border); border-color: var(--border); pointer-events: none; }
+
 /* 頭文字グループ */
 .artist-group-head {
   padding: 6px 16px 4px;
@@ -739,6 +795,8 @@ button { cursor: pointer; font-family: inherit; }
   padding: 1px 6px;
   white-space: nowrap;
 }
+.artist-tag-chip[data-tag="邦楽"] { color: #b84000; background: #fff0e6; border-color: #f5b07a; }
+.artist-tag-chip[data-tag="洋楽"] { color: #1555a0; background: #e6f0ff; border-color: #7aaaf5; }
 
 .artist-card-arrow {
   font-size: 20px;
