@@ -67,8 +67,7 @@ if ($initArtistId > 0) {
       <div class="search-input-row">
         <input type="search" id="q" class="search-input"
                placeholder="曲名・アーティスト名" autocomplete="off" enterkeyhint="search"
-               value="<?= htmlspecialchars($initQ) ?>"
-               <?= $initQ !== '' ? 'autofocus' : '' ?>>
+               value="<?= htmlspecialchars($initQ) ?>">
         <button id="clear-btn" class="search-clear" hidden aria-label="クリア">✕</button>
       </div>
       <div class="tag-scroll-wrap">
@@ -246,8 +245,10 @@ document.getElementById('song-list').addEventListener('click', e => {
   if (btn) addSong(parseInt(btn.dataset.id));
 });
 
-/* ── 検索 ── */
+/* ── 検索（常時フォーカス） ── */
 const qEl = document.getElementById('q');
+qEl.focus();
+qEl.setSelectionRange(qEl.value.length, qEl.value.length);
 qEl.addEventListener('input', debounce(e => {
   state.q = e.target.value.trim();
   state.page = 1;

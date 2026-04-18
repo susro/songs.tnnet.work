@@ -9,13 +9,28 @@ $page     = max(1, (int)($_GET['page'] ?? 1));
 $per      = 50;
 $off      = ($page - 1) * $per;
 
+function searchVariants(string $q): array {
+    $list = [$q];
+    $a = mb_convert_kana($q, 'as',  'UTF-8'); if ($a !== $q)           $list[] = $a;
+    $k = mb_convert_kana($q, 'KV',  'UTF-8'); if ($k !== $q)           $list[] = $k;
+    $h = mb_convert_kana($k, 'c',   'UTF-8'); if (!in_array($h,$list)) $list[] = $h;
+    $c = mb_convert_kana($q, 'C',   'UTF-8'); if (!in_array($c,$list)) $list[] = $c;
+    return array_unique($list);
+}
+
 $where  = [];
 $params = [];
 
 if ($q !== '') {
-    $where[]  = '(s.title LIKE ? OR a.name LIKE ?)';
-    $params[] = "%$q%";
-    $params[] = "%$q%";
+    $variants = searchVariants($q);
+    $orClauses = [];
+    foreach ($variants as $v) {
+        $orClauses[] = '(s.title LIKE ? OR a.name LIKE ? OR a.reading LIKE ?)';
+        $params[] = "%$v%";
+        $params[] = "%$v%";
+        $params[] = "%$v%";
+    }
+    $where[] = '(' . implode(' OR ', $orClauses) . ')';
 }
 
 if ($artistId > 0) {

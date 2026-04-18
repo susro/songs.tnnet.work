@@ -3,8 +3,17 @@ require_once 'config.php';
 require_login();
 
 $keyword  = trim((string)($_GET['q']      ?? ''));
-$tagFilter = trim((string)($_GET['tag']   ?? ''));  // '邦楽' | '洋楽' | ''
+$tagFilter = trim((string)($_GET['tag']   ?? ''));
 $focusId  = (int)($_GET['focus'] ?? 0);
+
+function searchVariants(string $q): array {
+    $list = [$q];
+    $a = mb_convert_kana($q, 'as',  'UTF-8'); if ($a !== $q)           $list[] = $a;
+    $k = mb_convert_kana($q, 'KV',  'UTF-8'); if ($k !== $q)           $list[] = $k;
+    $h = mb_convert_kana($k, 'c',   'UTF-8'); if (!in_array($h,$list)) $list[] = $h;
+    $c = mb_convert_kana($q, 'C',   'UTF-8'); if (!in_array($c,$list)) $list[] = $c;
+    return array_unique($list);
+}
 
 /* ── 50音行マッピング ── */
 function kanaRow(string $reading): string {
@@ -45,9 +54,15 @@ $where = [];
 $params = [];
 
 if ($keyword !== '') {
-    $where[]  = '(a.name LIKE ? OR a.reading LIKE ?)';
-    $params[] = "%{$keyword}%";
-    $params[] = "%{$keyword}%";
+    $variants = searchVariants($keyword);
+    $orClauses = [];
+    foreach ($variants as $v) {
+        $orClauses[] = '(a.name LIKE ? OR a.reading LIKE ? OR EXISTS (SELECT 1 FROM artist_aliases aa WHERE aa.artist_id=a.id AND aa.alias LIKE ?))';
+        $params[] = "%{$v}%";
+        $params[] = "%{$v}%";
+        $params[] = "%{$v}%";
+    }
+    $where[] = '(' . implode(' OR ', $orClauses) . ')';
 }
 if ($tagFilter !== '') {
     $where[]  = 'EXISTS (SELECT 1 FROM artist_tags atf JOIN tags tf ON atf.tag_id=tf.id WHERE atf.artist_id=a.id AND tf.name=?)';
@@ -117,8 +132,7 @@ function qs(array $merge): string {
         <?php endif; ?>
         <input type="search" name="q" id="artist-q" class="search-input"
                placeholder="アーティスト名を検索" autocomplete="off"
-               value="<?= htmlspecialchars($keyword) ?>"
-               <?= $keyword !== '' ? 'autofocus' : '' ?>>
+               value="<?= htmlspecialchars($keyword) ?>">
         <?php if ($keyword !== ''): ?>
           <a href="artists.php<?= $tagFilter ? '?tag='.urlencode($tagFilter) : '' ?>" class="search-clear" aria-label="クリア">✕</a>
         <?php endif; ?>
@@ -180,14 +194,32 @@ function qs(array $merge): string {
 
 <script>
 (function () {
-  /* リアルタイム検索 */
+  const CURSOR_KEY = 'artist_search_cursor';
   const inp = document.getElementById('artist-q');
   const frm = document.getElementById('artist-search-form');
   let timer;
+
+  /* カーソル位置を保存してサブミット */
+  function submitWithCursor() {
+    sessionStorage.setItem(CURSOR_KEY, inp.selectionStart);
+    frm.submit();
+  }
+
   inp.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => frm.submit(), 400);
+    timer = setTimeout(submitWithCursor, 450);
   });
+
+  /* ページロード後：カーソル復元 or 末尾 → 常時フォーカス */
+  const savedPos = sessionStorage.getItem(CURSOR_KEY);
+  sessionStorage.removeItem(CURSOR_KEY);
+  inp.focus();
+  if (savedPos !== null && inp.value) {
+    const pos = Math.min(parseInt(savedPos, 10), inp.value.length);
+    inp.setSelectionRange(pos, pos);
+  } else {
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+  }
 
   /* focus アーティストへスクロール */
   const focusId = <?= json_encode($focusId ?: null) ?>;
