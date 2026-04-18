@@ -117,7 +117,8 @@ function qs(array $merge): string {
         <?php endif; ?>
         <input type="search" name="q" id="artist-q" class="search-input"
                placeholder="アーティスト名を検索" autocomplete="off"
-               value="<?= htmlspecialchars($keyword) ?>">
+               value="<?= htmlspecialchars($keyword) ?>"
+               <?= $keyword !== '' ? 'autofocus' : '' ?>>
         <?php if ($keyword !== ''): ?>
           <a href="artists.php<?= $tagFilter ? '?tag='.urlencode($tagFilter) : '' ?>" class="search-clear" aria-label="クリア">✕</a>
         <?php endif; ?>

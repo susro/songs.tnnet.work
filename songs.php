@@ -67,7 +67,8 @@ if ($initArtistId > 0) {
       <div class="search-input-row">
         <input type="search" id="q" class="search-input"
                placeholder="曲名・アーティスト名" autocomplete="off" enterkeyhint="search"
-               value="<?= htmlspecialchars($initQ) ?>">
+               value="<?= htmlspecialchars($initQ) ?>"
+               <?= $initQ !== '' ? 'autofocus' : '' ?>>
         <button id="clear-btn" class="search-clear" hidden aria-label="クリア">✕</button>
       </div>
       <div class="tag-scroll-wrap">
