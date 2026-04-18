@@ -57,6 +57,16 @@ function login_with_invite(PDO $pdo, string $code, string $name): ?array {
         $user['name'] = $name;
     }
 
+    // 初回登録時：デフォルトソングリストを作成
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM songlists WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    if ((int)$stmt->fetchColumn() === 0) {
+        $ins = $pdo->prepare("INSERT INTO songlists (name, user_id) VALUES (?, ?)");
+        foreach (['お気に入り', '練習中', 'My定番'] as $listName) {
+            $ins->execute([$listName, $user['id']]);
+        }
+    }
+
     $_SESSION['user'] = [
         'id'       => (int)$user['id'],
         'name'     => $user['name'],
