@@ -427,6 +427,17 @@ if ($runAddArtist) {
         </div>
     </section>
 
+    <!-- ── ady楽曲インポート ── -->
+    <section class="panel-card" style="margin-bottom:16px">
+        <h2>ady楽曲インポート</h2>
+        <p style="font-size:13px;color:var(--text-sub);margin:0 0 10px">
+            ady.co.jp の楽曲一覧（歌い出し・コード難易度）を差分追加します。ファイルごとに処理するので1ファイルずつ実行してください。
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a href="tools/import_ady_songs.php" target="_blank" class="link-button" style="background:var(--blue);color:#fff;border-color:var(--blue-dark)">インポート画面を開く</a>
+        </div>
+    </section>
+
     <?php if ($results): ?>
         <section class="panel-card">
             <h2>実行結果</h2>
