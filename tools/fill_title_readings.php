@@ -55,6 +55,10 @@ if (isset($_GET['run']) || $isDry) {
             $filled++;
             $results[] = ['title' => $s['title'], 'reading' => $reading, 'ok' => true];
         } else {
+            if (!$isDry) {
+                // 読み取得不可（英語等）は空文字で処理済みにする
+                $pdo->prepare("UPDATE songs SET title_reading='' WHERE id=?")->execute([$s['id']]);
+            }
             $skipped++;
             $results[] = ['title' => $s['title'], 'reading' => null, 'ok' => false];
         }
