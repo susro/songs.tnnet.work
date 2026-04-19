@@ -99,33 +99,38 @@ function parse_song_page($html) {
 function yahoo_reading($text) {
     if ($text === '') return null;
 
-    // すでに全カナ・ひらがななら変換だけして返す
+    // 全カナ・ひらがなのみ → 変換だけして返す（API不要）
     if (preg_match('/^[ぁ-んァ-ヶーｦ-ﾟ\s　・♪]+$/u', $text)) {
         return mb_convert_kana($text, 'c', 'UTF-8');
     }
 
+    // 日本語文字（漢字・かな）を含まない場合はスキップ（英語名等）
+    if (!preg_match('/[ぁ-んァ-ヶー一-龯]/u', $text)) return null;
+
     $clientId = defined('YAHOO_CLIENT_ID') ? YAHOO_CLIENT_ID : '';
     if ($clientId === '') return null;
 
+    usleep(300000); // 0.3秒待機（レートリミット対策）
+
     $ctx = stream_context_create(['http' => [
-        'method'  => 'POST',
-        'header'  => implode("\r\n", [
-            'Content-Type: application/json',
-            'User-Agent: Yahoo AppID: ' . $clientId,
-        ]),
-        'content' => json_encode([
+        'method'         => 'POST',
+        'header'         => "Content-Type: application/json\r\nUser-Agent: Yahoo AppID: " . $clientId,
+        'content'        => json_encode([
             'id'      => '1',
             'jsonrpc' => '2.0',
             'method'  => 'jlp.furiganaservice.furigana',
             'params'  => ['q' => $text, 'grade' => 1],
         ]),
-        'timeout' => 8,
+        'timeout'        => 10,
+        'ignore_errors'  => true,
     ]]);
 
     $res = @file_get_contents('https://jlp.yahooapis.jp/FuriganaService/V2/furigana', false, $ctx);
     if (!$res) return null;
 
-    $data  = json_decode($res, true);
+    $data = json_decode($res, true);
+    if (!empty($data['Error'])) return null; // レートリミットや認証エラー
+
     $words = $data['result']['word'] ?? [];
     if (!$words) return null;
 
@@ -133,7 +138,8 @@ function yahoo_reading($text) {
     foreach ($words as $w) {
         $reading .= $w['furigana'] ?? $w['surface'] ?? '';
     }
-    return $reading !== '' ? $reading : null;
+    // 元テキストと同じなら読みとして意味がない
+    return ($reading !== '' && $reading !== $text) ? $reading : null;
 }
 
 /* ── DB取り込み ── */
@@ -183,7 +189,7 @@ function do_import($pdo, $data, $isDry) {
                 $stats['songs_existing']++;
                 continue;
             }
-            $titleReading = yahoo_reading($s['title']);
+            $titleReading = (!$isDry && $artistId) ? yahoo_reading($s['title']) : null;
             if (!$isDry && $artistId) {
                 $pdo->prepare("
                     INSERT INTO songs (title, title_reading, artist_id, lyrics_excerpt, chord_difficulty, chord_url, ady_recommended)
