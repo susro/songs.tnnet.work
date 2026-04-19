@@ -153,7 +153,7 @@ function copyNum(num, btn) {
 
 /* ── ソングリスト一覧 ── */
 async function loadLists() {
-  const res = await fetch('api/songlist.php?action=list');
+  const res = await fetch('api/songlist.php?action=list&song_id=' + SONG_ID);
   const data = await res.json();
   const area = document.getElementById('sd-list-area');
   const lists = (data.data ?? data.lists ?? []).filter(l => l.list_type !== 'dynamic');
@@ -161,14 +161,16 @@ async function loadLists() {
     area.innerHTML = '<p class="list-msg" style="padding:8px 0">リストがありません。<a href="songlists.php">作成する</a></p>';
     return;
   }
-  area.innerHTML = lists.map(l =>
-    `<button class="sd-list-btn" data-list-id="${l.id}" data-list-name="${l.name.replace(/"/g,'&quot;')}">
+  area.innerHTML = lists.map(l => {
+    const added = l.has_song;
+    return `<button class="sd-list-btn${added ? ' is-added' : ''}" data-list-id="${l.id}" data-list-name="${l.name.replace(/"/g,'&quot;')}" ${added ? 'data-already="1"' : ''}>
       <span class="sd-list-name">${l.name}</span>
-      <span class="sd-list-count">${l.song_count}曲</span>
-    </button>`
-  ).join('');
+      <span class="sd-list-count">${added ? '登録済 ✓' : l.song_count + '曲'}</span>
+    </button>`;
+  }).join('');
   area.querySelectorAll('.sd-list-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (btn.dataset.already) return;
       btn.disabled = true;
       const fd = new FormData();
       fd.append('action', 'add_song');
@@ -178,7 +180,8 @@ async function loadLists() {
       const data = await res.json();
       if (data.ok || data.already) {
         btn.classList.add('is-added');
-        btn.querySelector('.sd-list-count').textContent = '追加済 ✓';
+        btn.dataset.already = '1';
+        btn.querySelector('.sd-list-count').textContent = '登録済 ✓';
       }
       btn.disabled = false;
     });

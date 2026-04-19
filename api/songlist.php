@@ -30,7 +30,7 @@ switch ($action) {
         ");
         $stmt->execute([$me['id']]);
         $lists = $stmt->fetchAll();
-        // 動的リストの曲数を計算
+        $checkSongId = (int)($_GET['song_id'] ?? 0);
         foreach ($lists as &$sl) {
             if ($sl['list_type'] === 'dynamic') {
                 $cfg = json_decode($sl['filter_config'] ?? '{}', true);
@@ -39,6 +39,13 @@ switch ($action) {
                     $c->execute([$cfg['personal_tag'], $me['id']]);
                     $sl['song_count'] = (int)$c->fetchColumn();
                 }
+            }
+            if ($checkSongId && in_array($sl['list_type'], ['static','theme'])) {
+                $chk = $pdo->prepare("SELECT 1 FROM songlist_songs WHERE songlist_id=? AND song_id=?");
+                $chk->execute([$sl['id'], $checkSongId]);
+                $sl['has_song'] = (bool)$chk->fetchColumn();
+            } else {
+                $sl['has_song'] = false;
             }
         }
         unset($sl);

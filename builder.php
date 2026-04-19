@@ -719,15 +719,20 @@ document.getElementById('gen-invite-btn').addEventListener('click', function () 
   });
 });
 
-/* ── まとめて楽曲Get！ 開閉 ── */
+/* ── まとめて楽曲Get！ 開閉（状態をlocalStorageに保存） ── */
 (function () {
   var heading = document.getElementById('bulk-get-heading');
   var body    = document.getElementById('bulk-get-body');
   var icon    = document.getElementById('bulk-get-toggle-icon');
+  var KEY     = 'bulkGetOpen';
+  var isOpen  = localStorage.getItem(KEY) === '1';
+  body.hidden = !isOpen;
+  icon.textContent = isOpen ? '▲ 閉じる' : '▼ 開く';
   heading.addEventListener('click', function () {
     var open = body.hidden;
     body.hidden = !open;
     icon.textContent = open ? '▲ 閉じる' : '▼ 開く';
+    localStorage.setItem(KEY, open ? '1' : '0');
   });
 })();
 

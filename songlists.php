@@ -14,7 +14,11 @@ if ($id) {
         if ($detail['list_type'] === 'dynamic') {
             $cfg = json_decode($detail['filter_config'] ?? '{}', true);
             $personalTag = $cfg['personal_tag'] ?? '';
+            $personalTagId = 0;
             if ($personalTag) {
+                $tRow = $pdo->prepare("SELECT id FROM tags WHERE name=? AND tag_category='personal'");
+                $tRow->execute([$personalTag]);
+                $personalTagId = (int)($tRow->fetchColumn() ?: 0);
                 $ss = $pdo->prepare("
                     SELECT s.id, s.title, s.release_year, s.youtube_url, s.dam_number,
                            a.name AS artist_name
@@ -150,6 +154,9 @@ if (!$detail) {
               <?php endif; ?>
               <?php if ($detail['list_type'] === 'static'): ?>
                 <button class="remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
+              <?php endif; ?>
+              <?php if ($detail['list_type'] === 'dynamic' && $personalTagId): ?>
+                <button class="remove-btn dynamic-untag-btn" data-tag-id="<?= $personalTagId ?>" data-song-id="<?= $s['id'] ?>">✕</button>
               <?php endif; ?>
               <?php if ($detail['list_type'] === 'theme' && !empty($me['is_admin'])): ?>
                 <button class="remove-btn theme-remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
@@ -290,6 +297,18 @@ document.getElementById('copy-theme-btn')?.addEventListener('click', async e => 
     alert('「' + name + '」としてMyリストにコピーしました');
     location.href = 'songlists.php?id=' + data.data.id;
   }
+});
+
+/* 動的リスト: タグを外して削除 */
+document.getElementById('detail-song-list')?.addEventListener('click', async e => {
+  const btn = e.target.closest('.dynamic-untag-btn');
+  if (!btn) return;
+  if (!confirm('このタグを外しますか？（曲はリストから消えます）')) return;
+  const fd = new FormData();
+  fd.append('song_id', btn.dataset.songId);
+  fd.append('tag_id',  btn.dataset.tagId);
+  const data = await fetch('api/song_tag.php', { method:'POST', body:fd }).then(r => r.json());
+  if (!data.tagged) btn.closest('.song-card').remove();
 });
 
 /* テーマリスト: 管理者による曲削除 */
