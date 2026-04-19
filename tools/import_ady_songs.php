@@ -110,7 +110,7 @@ function yahoo_reading($text) {
     $clientId = defined('YAHOO_CLIENT_ID') ? YAHOO_CLIENT_ID : '';
     if ($clientId === '') return null;
 
-    usleep(300000); // 0.3秒待機（レートリミット対策）
+    usleep(100000); // 0.1秒待機
 
     $ctx = stream_context_create(['http' => [
         'method'         => 'POST',
@@ -189,14 +189,13 @@ function do_import($pdo, $data, $isDry) {
                 $stats['songs_existing']++;
                 continue;
             }
-            $titleReading = (!$isDry && $artistId) ? yahoo_reading($s['title']) : null;
+            // 曲タイトル読みはインポート時は取得しない（後でバッチ補完）
             if (!$isDry && $artistId) {
                 $pdo->prepare("
-                    INSERT INTO songs (title, title_reading, artist_id, lyrics_excerpt, chord_difficulty, chord_url, ady_recommended)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO songs (title, artist_id, lyrics_excerpt, chord_difficulty, chord_url, ady_recommended)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ")->execute([
                     $s['title'],
-                    $titleReading,
                     (int)$artistId,
                     $s['lyrics']     ?: null,
                     $s['difficulty'] ?: null,
