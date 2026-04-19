@@ -375,6 +375,36 @@ if ($runAddArtist) {
         </form>
     </section>
 
+    <!-- ── テーマリスト管理 ── -->
+    <section class="panel-card" style="margin-bottom:16px">
+        <h2>テーマリスト管理</h2>
+        <p style="font-size:13px;color:var(--text-sub);margin:0 0 10px">全ユーザーに公開される特集リスト。ユーザーはMyリストにコピーできます。</p>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <input type="text" id="theme-list-name" placeholder="特集名（例: 90年代J-POP特集）" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+          <button class="launch-button" id="create-theme-btn">作成</button>
+        </div>
+
+        <div id="theme-list-wrap">
+          <?php
+          $themeStmt = $pdo->query("SELECT sl.id, sl.name, COUNT(ss.song_id) AS cnt FROM songlists sl LEFT JOIN songlist_songs ss ON sl.id=ss.songlist_id WHERE sl.list_type='theme' GROUP BY sl.id ORDER BY sl.updated_at DESC");
+          $themeListsAdmin = $themeStmt->fetchAll();
+          ?>
+          <?php if (empty($themeListsAdmin)): ?>
+            <p style="color:var(--text-sub);font-size:13px">テーマリストはまだありません</p>
+          <?php else: ?>
+            <?php foreach ($themeListsAdmin as $tl): ?>
+              <div class="theme-admin-row" data-id="<?= $tl['id'] ?>">
+                <a href="songlists.php?id=<?= $tl['id'] ?>" target="_blank" class="theme-admin-name">
+                  📌 <?= htmlspecialchars($tl['name']) ?> <span style="color:var(--text-sub);font-size:12px"><?= $tl['cnt'] ?>曲</span>
+                </a>
+                <button class="link-button delete-theme-btn" data-id="<?= $tl['id'] ?>" data-name="<?= htmlspecialchars($tl['name']) ?>">削除</button>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+    </section>
+
     <!-- ── アーティスト最新化 ── -->
     <section class="panel-card" style="margin-bottom:16px">
         <h2>アーティストDB最新化</h2>
@@ -679,6 +709,34 @@ document.getElementById('gen-invite-btn').addEventListener('click', function () 
     msg.style.display = 'block';
     doSubmit();
   });
+});
+
+/* ── テーマリスト作成 ── */
+document.getElementById('create-theme-btn')?.addEventListener('click', async () => {
+  const name = document.getElementById('theme-list-name').value.trim();
+  if (!name) return alert('特集名を入力してください');
+  const fd = new FormData();
+  fd.append('action', 'create_theme');
+  fd.append('name', name);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
+  if (data.ok) {
+    alert('「' + name + '」を作成しました。songlists.phpから曲を追加できます。');
+    location.reload();
+  } else {
+    alert('エラー: ' + data.error);
+  }
+});
+
+/* ── テーマリスト削除 ── */
+document.getElementById('theme-list-wrap')?.addEventListener('click', async e => {
+  const btn = e.target.closest('.delete-theme-btn');
+  if (!btn) return;
+  if (!confirm('「' + btn.dataset.name + '」を削除しますか？')) return;
+  const fd = new FormData();
+  fd.append('action', 'delete_theme');
+  fd.append('id', btn.dataset.id);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
+  if (data.ok) btn.closest('.theme-admin-row').remove();
 });
 </script>
 </body>

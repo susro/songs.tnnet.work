@@ -7,7 +7,7 @@ $detail = null;
 $detailSongs = [];
 
 if ($id) {
-    $s = $pdo->prepare("SELECT * FROM songlists WHERE id = ? AND user_id = ?");
+    $s = $pdo->prepare("SELECT * FROM songlists WHERE id = ? AND (user_id = ? OR list_type = 'theme')");
     $s->execute([$id, $me['id']]);
     $detail = $s->fetch();
     if ($detail) {
@@ -50,13 +50,14 @@ if (!$detail) {
                sl.list_type, sl.filter_config,
                COUNT(ss.song_id) AS song_count
         FROM songlists sl
-        LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id AND sl.list_type = 'static'
-        WHERE sl.user_id = ?
+        LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id AND sl.list_type IN ('static','theme')
+        WHERE sl.user_id = ? OR sl.list_type = 'theme'
         GROUP BY sl.id ORDER BY sl.list_type DESC, sl.updated_at DESC
     ");
     $listStmt->execute([$me['id']]);
-    $lists = $listStmt->fetchAll();
-    foreach ($lists as &$sl) {
+    $allLists = $listStmt->fetchAll();
+    $lists = []; $themeLists = [];
+    foreach ($allLists as &$sl) {
         if ($sl['list_type'] === 'dynamic') {
             $cfg = json_decode($sl['filter_config'] ?? '{}', true);
             if (!empty($cfg['personal_tag'])) {
@@ -65,6 +66,8 @@ if (!$detail) {
                 $sl['song_count'] = (int)$c->fetchColumn();
             }
         }
+        if ($sl['list_type'] === 'theme') $themeLists[] = $sl;
+        else $lists[] = $sl;
     }
     unset($sl);
 }
@@ -114,8 +117,15 @@ if (!$detail) {
 
       <?php if ($detail['list_type'] === 'static'): ?>
         <a href="songs.php" class="add-songs-link">＋ 曲を追加する →</a>
-      <?php else: ?>
+      <?php elseif ($detail['list_type'] === 'dynamic'): ?>
         <div class="dynamic-list-note">マイタグ「<?= htmlspecialchars(json_decode($detail['filter_config'],true)['personal_tag'] ?? '') ?>」のついた曲が自動表示されます</div>
+      <?php else: ?>
+        <div class="theme-list-note">
+          <span>📌 テーマリスト（閲覧専用）</span>
+          <button class="btn-copy-theme" id="copy-theme-btn" data-id="<?= $detail['id'] ?>" data-name="<?= htmlspecialchars($detail['name']) ?>の copy">
+            このリストをMyリストにコピー
+          </button>
+        </div>
       <?php endif; ?>
 
       <?php if (!$detailSongs): ?>
@@ -140,6 +150,9 @@ if (!$detail) {
               <?php endif; ?>
               <?php if ($detail['list_type'] === 'static'): ?>
                 <button class="remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
+              <?php endif; ?>
+              <?php if ($detail['list_type'] === 'theme' && !empty($me['is_admin'])): ?>
+                <button class="remove-btn theme-remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
               <?php endif; ?>
             </div>
           <?php endforeach; ?>
@@ -182,6 +195,26 @@ if (!$detail) {
                     <span class="list-type-badge">自動</span>
                   <?php endif; ?>
                 </div>
+                <div class="list-card-meta">
+                  <?= (int)$sl['song_count'] ?>曲
+                  · <?= date('m/d', strtotime($sl['updated_at'])) ?>更新
+                </div>
+              </div>
+              <span class="list-card-count"><?= (int)$sl['song_count'] ?></span>
+              <span class="list-card-arrow">›</span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if (!empty($themeLists)): ?>
+        <div class="theme-section-head">テーマリスト</div>
+        <div class="list-card-wrap">
+          <?php foreach ($themeLists as $sl): ?>
+            <a href="songlists.php?id=<?= $sl['id'] ?>" class="list-card list-card-theme">
+              <span class="list-card-icon">📌</span>
+              <div class="list-card-body">
+                <div class="list-card-name"><?= htmlspecialchars($sl['name']) ?></div>
                 <div class="list-card-meta">
                   <?= (int)$sl['song_count'] ?>曲
                   · <?= date('m/d', strtotime($sl['updated_at'])) ?>更新
@@ -241,6 +274,35 @@ document.getElementById('delete-list-btn')?.addEventListener('click', async e =>
   const fd = new FormData(); fd.append('action','delete'); fd.append('id', e.currentTarget.dataset.id);
   const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
   if (data.ok) location.href = 'songlists.php';
+});
+
+/* テーマリスト: Myリストにコピー */
+document.getElementById('copy-theme-btn')?.addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  const name = prompt('コピー先のリスト名を入力してください', btn.dataset.name);
+  if (!name) return;
+  const fd = new FormData();
+  fd.append('action', 'copy');
+  fd.append('id', btn.dataset.id);
+  fd.append('name', name);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
+  if (data.ok) {
+    alert('「' + name + '」としてMyリストにコピーしました');
+    location.href = 'songlists.php?id=' + data.data.id;
+  }
+});
+
+/* テーマリスト: 管理者による曲削除 */
+document.getElementById('detail-song-list')?.addEventListener('click', async e => {
+  const btn = e.target.closest('.theme-remove-btn');
+  if (!btn) return;
+  if (!confirm('このリストから削除しますか？')) return;
+  const fd = new FormData();
+  fd.append('action','theme_remove_song');
+  fd.append('songlist_id', btn.dataset.list);
+  fd.append('song_id', btn.dataset.song);
+  const data = await fetch('api/songlist.php', { method:'POST', body:fd }).then(r => r.json());
+  if (data.ok) btn.closest('.song-card').remove();
 });
 </script>
 </body>

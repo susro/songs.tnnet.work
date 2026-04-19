@@ -1108,6 +1108,52 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 .sd-list-name  { font-size: 14px; font-weight: 600; color: var(--text); }
 .sd-list-count { font-size: 12px; color: var(--text-sub); }
 
+/* テーマリスト */
+.theme-section-head {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 16px 4px 6px;
+}
+.list-card-theme { border-left: 3px solid #e8a000; }
+.theme-list-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-sub);
+  background: #fff8e6;
+  border-left: 3px solid #e8a000;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 0 6px 6px 0;
+}
+.btn-copy-theme {
+  padding: 7px 14px;
+  background: #e8a000;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-copy-theme:hover { background: #c48800; }
+.theme-admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.theme-admin-name { font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; }
+.theme-admin-name:hover { color: var(--blue); }
+
 /* 動的リストバッジ・説明 */
 .list-type-badge {
   display: inline-block;

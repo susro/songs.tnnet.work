@@ -17,15 +17,15 @@ function err($msg, $code = 400) {
 
 switch ($action) {
 
-    // ---- 全リスト一覧（自分のリストのみ） ----
+    // ---- 全リスト一覧（自分のリスト＋テーマリスト） ----
     case 'list':
         $stmt = $pdo->prepare("
             SELECT sl.id, sl.name, sl.memo, sl.updated_at,
                    sl.list_type, sl.filter_config,
                    COUNT(ss.song_id) AS song_count
             FROM songlists sl
-            LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id AND sl.list_type = 'static'
-            WHERE sl.user_id = ?
+            LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id AND sl.list_type IN ('static','theme')
+            WHERE sl.user_id = ? OR sl.list_type = 'theme'
             GROUP BY sl.id ORDER BY sl.list_type DESC, sl.updated_at DESC
         ");
         $stmt->execute([$me['id']]);
@@ -48,7 +48,7 @@ switch ($action) {
     case 'songs':
         $id = (int)($_GET['id'] ?? 0);
         if (!$id) err('IDが必要');
-        $list = $pdo->prepare("SELECT list_type, filter_config FROM songlists WHERE id=? AND user_id=?");
+        $list = $pdo->prepare("SELECT list_type, filter_config FROM songlists WHERE id=? AND (user_id=? OR list_type='theme')");
         $list->execute([$id, $me['id']]);
         $listRow = $list->fetch();
         if (!$listRow) err('リストが見つかりません', 404);
@@ -125,6 +125,64 @@ switch ($action) {
         $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM songlist_songs WHERE songlist_id = ?");
         $cntStmt->execute([$listId]);
         ok(['count' => (int)$cntStmt->fetchColumn()]);
+
+    // ---- テーマリストをMyリストにコピー ----
+    case 'copy':
+        $srcId = (int)($_POST['id'] ?? 0);
+        $name  = trim($_POST['name'] ?? '');
+        if (!$srcId || $name === '') err('パラメータ不足');
+        $src = $pdo->prepare("SELECT list_type FROM songlists WHERE id=? AND list_type='theme'");
+        $src->execute([$srcId]);
+        if (!$src->fetch()) err('テーマリストが見つかりません', 404);
+        $pdo->prepare("INSERT INTO songlists (user_id, name, list_type) VALUES (?, ?, 'static')")->execute([$me['id'], $name]);
+        $newId = (int)$pdo->lastInsertId();
+        $pdo->prepare("
+            INSERT INTO songlist_songs (songlist_id, song_id, position)
+            SELECT ?, song_id, position FROM songlist_songs WHERE songlist_id=?
+        ")->execute([$newId, $srcId]);
+        ok(['id' => $newId, 'name' => $name]);
+
+    // ---- テーマリスト作成（管理者のみ） ----
+    case 'create_theme':
+        if (!$me['is_admin']) err('権限がありません', 403);
+        $name = trim($_POST['name'] ?? '');
+        $memo = trim($_POST['memo'] ?? '');
+        if ($name === '') err('リスト名が必要です');
+        $pdo->prepare("INSERT INTO songlists (user_id, name, memo, list_type) VALUES (?, ?, ?, 'theme')")->execute([$me['id'], $name, $memo]);
+        ok(['id' => (int)$pdo->lastInsertId(), 'name' => $name]);
+
+    // ---- テーマリストへ曲追加（管理者のみ） ----
+    case 'theme_add_song':
+        if (!$me['is_admin']) err('権限がありません', 403);
+        $listId = (int)($_POST['songlist_id'] ?? 0);
+        $songId = (int)($_POST['song_id']     ?? 0);
+        if (!$listId || !$songId) err('IDが不正');
+        $chk = $pdo->prepare("SELECT id FROM songlists WHERE id=? AND list_type='theme'");
+        $chk->execute([$listId]);
+        if (!$chk->fetch()) err('テーマリストが見つかりません', 404);
+        $pdo->prepare("INSERT IGNORE INTO songlist_songs (songlist_id, song_id) VALUES (?, ?)")->execute([$listId, $songId]);
+        $pdo->prepare("UPDATE songlists SET updated_at=NOW() WHERE id=?")->execute([$listId]);
+        $c = $pdo->prepare("SELECT COUNT(*) FROM songlist_songs WHERE songlist_id=?");
+        $c->execute([$listId]);
+        ok(['count' => (int)$c->fetchColumn()]);
+
+    // ---- テーマリストから曲削除（管理者のみ） ----
+    case 'theme_remove_song':
+        if (!$me['is_admin']) err('権限がありません', 403);
+        $listId = (int)($_POST['songlist_id'] ?? 0);
+        $songId = (int)($_POST['song_id']     ?? 0);
+        if (!$listId || !$songId) err('IDが不正');
+        $pdo->prepare("DELETE FROM songlist_songs WHERE songlist_id=? AND song_id=?")->execute([$listId, $songId]);
+        $pdo->prepare("UPDATE songlists SET updated_at=NOW() WHERE id=?")->execute([$listId]);
+        ok(true);
+
+    // ---- テーマリスト削除（管理者のみ） ----
+    case 'delete_theme':
+        if (!$me['is_admin']) err('権限がありません', 403);
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) err('IDが必要');
+        $pdo->prepare("DELETE FROM songlists WHERE id=? AND list_type='theme'")->execute([$id]);
+        ok(true);
 
     default:
         err('不明なアクション');
