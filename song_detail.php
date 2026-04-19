@@ -86,7 +86,29 @@ $backUrl = in_array($back, ['songs', 'artist']) ? ($back === 'artist' && $song['
       </div>
       <?php endif; ?>
 
-      <!-- ③ マイタグ -->
+      <!-- ③ 歌い出し -->
+      <?php if (!empty($song['lyrics_excerpt'])): ?>
+      <div class="sd-section">
+        <div class="sd-section-label">歌い出し</div>
+        <div class="sd-lyrics"><?= htmlspecialchars($song['lyrics_excerpt']) ?></div>
+      </div>
+      <?php endif; ?>
+
+      <!-- ④ コード難易度 -->
+      <?php if (!empty($song['chord_difficulty'])): ?>
+      <div class="sd-section">
+        <div class="sd-section-label">コード難易度</div>
+        <span class="sd-chord-badge sd-chord-<?= htmlspecialchars($song['chord_difficulty']) ?>">
+          <?= htmlspecialchars($song['chord_difficulty']) ?>
+          <?= $song['chord_difficulty']==='A' ? '（やさしい）' : ($song['chord_difficulty']==='B' ? '（ふつう）' : '（むずかしい）') ?>
+        </span>
+        <?php if (!empty($song['chord_url'])): ?>
+          <a href="https://www.ady.co.jp/song-chord/<?= htmlspecialchars($song['chord_url']) ?>" target="_blank" rel="noopener" class="sd-chord-link">コード譜を見る →</a>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+
+      <!-- ⑤ マイタグ -->
       <?php if ($personalTags): ?>
       <div class="sd-section">
         <div class="sd-section-label">マイタグ</div>
