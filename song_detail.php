@@ -156,7 +156,7 @@ async function loadLists() {
   const res = await fetch('api/songlist.php?action=list');
   const data = await res.json();
   const area = document.getElementById('sd-list-area');
-  const lists = data.data ?? data.lists ?? [];
+  const lists = (data.data ?? data.lists ?? []).filter(l => l.list_type !== 'dynamic');
   if (!lists.length) {
     area.innerHTML = '<p class="list-msg" style="padding:8px 0">リストがありません。<a href="songlists.php">作成する</a></p>';
     return;

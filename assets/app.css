@@ -1108,6 +1108,29 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 .sd-list-name  { font-size: 14px; font-weight: 600; color: var(--text); }
 .sd-list-count { font-size: 12px; color: var(--text-sub); }
 
+/* 動的リストバッジ・説明 */
+.list-type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #1555a0;
+  background: #e6f0ff;
+  border: 1px solid #7aaaf5;
+  border-radius: 4px;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.dynamic-list-note {
+  font-size: 13px;
+  color: var(--text-sub);
+  background: #e6f0ff;
+  border-left: 3px solid var(--blue);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 0 6px 6px 0;
+}
+
 /* songs.php: カード本体をリンク化 */
 .song-card-body { text-decoration: none; color: inherit; display: block; flex: 1; min-width: 0; }
 .song-card-body:hover .song-title { color: var(--blue); }

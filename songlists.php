@@ -11,16 +11,36 @@ if ($id) {
     $s->execute([$id, $me['id']]);
     $detail = $s->fetch();
     if ($detail) {
-        $ss = $pdo->prepare("
-            SELECT s.id, s.title, s.release_year, s.youtube_url, a.name AS artist_name
-            FROM songlist_songs sl
-            JOIN songs s ON sl.song_id = s.id
-            LEFT JOIN artists a ON s.artist_id = a.id
-            WHERE sl.songlist_id = ?
-            ORDER BY sl.position ASC, sl.added_at ASC
-        ");
-        $ss->execute([$id]);
-        $detailSongs = $ss->fetchAll();
+        if ($detail['list_type'] === 'dynamic') {
+            $cfg = json_decode($detail['filter_config'] ?? '{}', true);
+            $personalTag = $cfg['personal_tag'] ?? '';
+            if ($personalTag) {
+                $ss = $pdo->prepare("
+                    SELECT s.id, s.title, s.release_year, s.youtube_url, s.dam_number,
+                           a.name AS artist_name
+                    FROM song_tags st
+                    JOIN tags t  ON st.tag_id = t.id
+                    JOIN songs s ON st.song_id = s.id
+                    LEFT JOIN artists a ON s.artist_id = a.id
+                    WHERE t.name = ? AND st.user_id = ?
+                    ORDER BY s.id DESC
+                ");
+                $ss->execute([$personalTag, $me['id']]);
+                $detailSongs = $ss->fetchAll();
+            }
+        } else {
+            $ss = $pdo->prepare("
+                SELECT s.id, s.title, s.release_year, s.youtube_url, s.dam_number,
+                       a.name AS artist_name
+                FROM songlist_songs sl
+                JOIN songs s ON sl.song_id = s.id
+                LEFT JOIN artists a ON s.artist_id = a.id
+                WHERE sl.songlist_id = ?
+                ORDER BY sl.position ASC, sl.added_at ASC
+            ");
+            $ss->execute([$id]);
+            $detailSongs = $ss->fetchAll();
+        }
     }
 }
 
@@ -80,35 +100,46 @@ if (!$detail) {
         </button>
       </div>
 
-      <a href="songs.php" class="add-songs-link">＋ 曲を追加する →</a>
+      <?php if ($detail['list_type'] === 'static'): ?>
+        <a href="songs.php" class="add-songs-link">＋ 曲を追加する →</a>
+      <?php else: ?>
+        <div class="dynamic-list-note">マイタグ「<?= htmlspecialchars(json_decode($detail['filter_config'],true)['personal_tag'] ?? '') ?>」のついた曲が自動表示されます</div>
+      <?php endif; ?>
 
       <?php if (!$detailSongs): ?>
-        <div class="list-msg">曲がまだありません。「曲を追加する」から追加してください。</div>
+        <div class="list-msg"><?= $detail['list_type']==='dynamic' ? 'まだタグをつけた曲がありません。楽曲詳細ページからタグを追加してください。' : '曲がまだありません。「曲を追加する」から追加してください。' ?></div>
       <?php else: ?>
         <div class="list-card-wrap" id="detail-song-list">
           <?php foreach ($detailSongs as $i => $s): ?>
             <div class="song-card" data-id="<?= $s['id'] ?>">
               <span class="song-card-num"><?= $i + 1 ?></span>
-              <div class="song-card-body">
+              <a class="song-card-body" href="song_detail.php?id=<?= $s['id'] ?>">
                 <div class="song-title"><?= htmlspecialchars($s['title']) ?></div>
                 <div class="song-meta">
                   <?= htmlspecialchars($s['artist_name'] ?? '—') ?>
                   <?= $s['release_year'] ? ' · ' . $s['release_year'] : '' ?>
+                  <?php if (!empty($s['dam_number'])): ?>
+                    <span class="dam-num">DAM●<?= htmlspecialchars($s['dam_number']) ?></span>
+                  <?php endif; ?>
                 </div>
-              </div>
+              </a>
               <?php if ($s['youtube_url']): ?>
                 <a class="yt-btn" href="<?= htmlspecialchars($s['youtube_url']) ?>" target="_blank" rel="noopener">▶</a>
               <?php endif; ?>
-              <button class="remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
+              <?php if ($detail['list_type'] === 'static'): ?>
+                <button class="remove-btn" data-list="<?= $detail['id'] ?>" data-song="<?= $s['id'] ?>">✕</button>
+              <?php endif; ?>
             </div>
           <?php endforeach; ?>
         </div>
 
+        <?php if ($detail['list_type'] === 'static'): ?>
         <div class="danger-zone">
           <button class="btn-danger" id="delete-list-btn" data-id="<?= $detail['id'] ?>">
             このリストを削除
           </button>
         </div>
+        <?php endif; ?>
       <?php endif; ?>
 
     <?php else: ?>
@@ -131,9 +162,14 @@ if (!$detail) {
         <div class="list-card-wrap">
           <?php foreach ($lists as $sl): ?>
             <a href="songlists.php?id=<?= $sl['id'] ?>" class="list-card">
-              <span class="list-card-icon">📋</span>
+              <span class="list-card-icon"><?= $sl['list_type']==='dynamic' ? '🔄' : '📋' ?></span>
               <div class="list-card-body">
-                <div class="list-card-name"><?= htmlspecialchars($sl['name']) ?></div>
+                <div class="list-card-name">
+                  <?= htmlspecialchars($sl['name']) ?>
+                  <?php if ($sl['list_type']==='dynamic'): ?>
+                    <span class="list-type-badge">自動</span>
+                  <?php endif; ?>
+                </div>
                 <div class="list-card-meta">
                   <?= (int)$sl['song_count'] ?>曲
                   · <?= date('m/d', strtotime($sl['updated_at'])) ?>更新
