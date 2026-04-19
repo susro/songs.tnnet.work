@@ -95,28 +95,45 @@ function parse_song_page($html) {
     return $results;
 }
 
-/* ── 読み仮名を推定（カナ名 or iTunes API） ── */
-function guess_reading($artistName) {
-    // 全角カナ・ひらがな・長音符・スペースのみで構成されていればひらがなに変換
-    if (preg_match('/^[ぁ-んァ-ヶーｦ-ﾟ\s　]+$/u', $artistName)) {
-        return mb_convert_kana($artistName, 'c', 'UTF-8'); // カタカナ→ひらがな
+/* ── Yahoo! ルビ振りAPI でひらがな読みを取得 ── */
+function yahoo_reading($text) {
+    if ($text === '') return null;
+
+    // すでに全カナ・ひらがななら変換だけして返す
+    if (preg_match('/^[ぁ-んァ-ヶーｦ-ﾟ\s　・♪]+$/u', $text)) {
+        return mb_convert_kana($text, 'c', 'UTF-8');
     }
-    // iTunes API で検索し、カナ結果なら採用
-    $url = 'https://itunes.apple.com/search?' . http_build_query([
-        'term'    => $artistName,
-        'country' => 'jp',
-        'entity'  => 'musicArtist',
-        'limit'   => 1,
-    ]);
-    $json = @file_get_contents($url);
-    if (!$json) return null;
-    $data = json_decode($json, true);
-    $suggested = trim((string)($data['results'][0]['artistName'] ?? ''));
-    if ($suggested !== '' && $suggested !== $artistName
-        && preg_match('/^[ぁ-んァ-ヶーｦ-ﾟ\s　]+$/u', $suggested)) {
-        return mb_convert_kana($suggested, 'c', 'UTF-8');
+
+    $clientId = defined('YAHOO_CLIENT_ID') ? YAHOO_CLIENT_ID : '';
+    if ($clientId === '') return null;
+
+    $ctx = stream_context_create(['http' => [
+        'method'  => 'POST',
+        'header'  => implode("\r\n", [
+            'Content-Type: application/json',
+            'User-Agent: Yahoo AppID: ' . $clientId,
+        ]),
+        'content' => json_encode([
+            'id'      => '1',
+            'jsonrpc' => '2.0',
+            'method'  => 'jlp.furiganaservice.furigana',
+            'params'  => ['q' => $text, 'grade' => 1],
+        ]),
+        'timeout' => 8,
+    ]]);
+
+    $res = @file_get_contents('https://jlp.yahooapis.jp/FuriganaService/V2/furigana', false, $ctx);
+    if (!$res) return null;
+
+    $data  = json_decode($res, true);
+    $words = $data['result']['word'] ?? [];
+    if (!$words) return null;
+
+    $reading = '';
+    foreach ($words as $w) {
+        $reading .= $w['furigana'] ?? $w['surface'] ?? '';
     }
-    return null;
+    return $reading !== '' ? $reading : null;
 }
 
 /* ── DB取り込み ── */
@@ -143,7 +160,7 @@ function do_import($pdo, $data, $isDry) {
         if ($artistId) {
             $stats['artists_existing']++;
         } else {
-            $reading = guess_reading($artistName);
+            $reading = yahoo_reading($artistName);
             if (!$isDry) {
                 $pdo->prepare("INSERT INTO artists (name, reading) VALUES (?, ?)")
                     ->execute([$artistName, $reading]);
@@ -166,12 +183,14 @@ function do_import($pdo, $data, $isDry) {
                 $stats['songs_existing']++;
                 continue;
             }
+            $titleReading = yahoo_reading($s['title']);
             if (!$isDry && $artistId) {
                 $pdo->prepare("
-                    INSERT INTO songs (title, artist_id, lyrics_excerpt, chord_difficulty, chord_url, ady_recommended)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO songs (title, title_reading, artist_id, lyrics_excerpt, chord_difficulty, chord_url, ady_recommended)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 ")->execute([
                     $s['title'],
+                    $titleReading,
                     (int)$artistId,
                     $s['lyrics']     ?: null,
                     $s['difficulty'] ?: null,

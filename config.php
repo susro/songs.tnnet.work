@@ -19,6 +19,9 @@ define('DB_NAME', 'tnnet_songs');
 define('DB_USER', 'tnnet_songs');            // ★DBユーザー名
 define('DB_PASS', '2469Songs');        // ★DBパスワード
 
+// Yahoo! ルビ振りAPI Client ID（https://developer.yahoo.co.jp/）
+define('YAHOO_CLIENT_ID', '');         // ★ここにClient IDを貼る
+
 try {
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
