@@ -12,11 +12,10 @@ function ady_fetch($url) {
     $ctx = stream_context_create(['http' => [
         'timeout'    => 30,
         'user_agent' => 'Mozilla/5.0 (compatible; personal-use)',
-        'header'     => "Accept-Charset: Shift_JIS\r\n",
     ]]);
     $raw = @file_get_contents($url, false, $ctx);
     if ($raw === false) return null;
-    return mb_convert_encoding($raw, 'UTF-8', 'SJIS-win');
+    return mb_convert_encoding($raw, 'UTF-8', 'CP932');
 }
 
 /* ── artist.htm から .htm ファイル名一覧を取得 ── */
@@ -27,23 +26,20 @@ function get_song_files($baseUrl) {
     return array_values(array_unique($m[1]));
 }
 
-/* ── 楽曲リストページをパース ── */
+/* ── 楽曲リストページをRegexでパース ── */
 function parse_song_page($html) {
-    $dom = new DOMDocument('1.0', 'UTF-8');
-    libxml_use_internal_errors(true);
-    $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
-    libxml_clear_errors();
-    $xpath = new DOMXPath($dom);
-
-    $results = [];       // artistName => [songs]
+    $results       = [];
     $currentArtist = null;
 
-    foreach ($xpath->query('//tr') as $tr) {
-        /* アーティストヘッダ行: bgcolor="#ffff71" のTDを含む */
-        if ($xpath->query('.//td[@bgcolor="#ffff71"]', $tr)->length > 0) {
-            $anchor = $xpath->query('.//a[@name]', $tr)->item(0);
-            if ($anchor) {
-                $currentArtist = trim($anchor->getAttribute('name'));
+    // TR ブロックを全て抽出
+    preg_match_all('/<TR\b[^>]*>(.*?)<\/TR>/si', $html, $trMatches);
+
+    foreach ($trMatches[1] as $row) {
+
+        /* アーティストヘッダ行: #ffff71 を含む */
+        if (stripos($row, '#ffff71') !== false) {
+            if (preg_match('/<A\s+name="([^"]+)"/i', $row, $m)) {
+                $currentArtist = trim(html_entity_decode($m[1], ENT_QUOTES, 'UTF-8'));
                 if (!isset($results[$currentArtist])) {
                     $results[$currentArtist] = [];
                 }
@@ -53,29 +49,37 @@ function parse_song_page($html) {
 
         if ($currentArtist === null) continue;
 
-        /* 楽曲行: bgcolor="#ddffff" のTDが2つ以上 */
-        $cyanTds = $xpath->query('.//td[@bgcolor="#ddffff"]', $tr);
-        if ($cyanTds->length < 2) continue;
+        /* 楽曲行: #ddffff が2つ以上 */
+        if (substr_count(strtolower($row), '#ddffff') < 2) continue;
 
-        $title  = trim($cyanTds->item(0)->textContent);
-        $lyrics = trim($cyanTds->item(1)->textContent);
+        preg_match_all('/<TD\b[^>]*bgcolor="#ddffff"[^>]*>(.*?)<\/TD>/si', $row, $cyanM);
+        if (count($cyanM[1]) < 2) continue;
+
+        $title  = trim(strip_tags($cyanM[1][0]));
+        $lyrics = trim(strip_tags($cyanM[1][1]));
         if ($title === '') continue;
 
+        /* おすすめ(R)フラグ */
         $recommended = 0;
-        $difficulty  = '';
-        $chordUrl    = '';
+        if (preg_match('/<TD\b[^>]*bgcolor="#ffff00"[^>]*>(.*?)<\/TD>/si', $row, $rm)) {
+            if (trim(strip_tags($rm[1])) === 'R') $recommended = 1;
+        }
 
-        foreach ($xpath->query('.//td', $tr) as $td) {
-            $bg   = strtolower($td->getAttribute('bgcolor'));
-            $text = trim($td->textContent);
+        /* コードページURL */
+        $chordUrl = '';
+        if (preg_match('/href="(kessai\/[^"]+\.htm)"/i', $row, $cm)) {
+            $chordUrl = $cm[1];
+        }
 
-            if ($bg === '#ffff00' && $text === 'R') {
-                $recommended = 1;
-            } elseif ($bg === '#ffff88') {
-                $a = $xpath->query('.//a', $td)->item(0);
-                if ($a) $chordUrl = $a->getAttribute('href');
-            } elseif ($bg === '' && strlen($text) === 1 && ctype_alpha($text)) {
-                $difficulty = strtoupper($text);
+        /* 難易度: bgcolorなしTDでA/B/C */
+        $difficulty = '';
+        preg_match_all('/<TD\b([^>]*)>(.*?)<\/TD>/si', $row, $allTds, PREG_SET_ORDER);
+        foreach (array_reverse($allTds) as $td) {
+            if (stripos($td[1], 'bgcolor') !== false) continue;
+            $txt = trim(strip_tags($td[2]));
+            if (strlen($txt) === 1 && in_array($txt, ['A','B','C'])) {
+                $difficulty = $txt;
+                break;
             }
         }
 
@@ -87,23 +91,30 @@ function parse_song_page($html) {
             'recommended' => $recommended,
         ];
     }
+
     return $results;
 }
 
 /* ── DB取り込み ── */
 function do_import($pdo, $data, $isDry) {
+    // 邦楽タグID取得
+    $tRow = $pdo->prepare("SELECT id FROM tags WHERE name='邦楽' LIMIT 1");
+    $tRow->execute();
+    $邦楽TagId = (int)($tRow->fetchColumn() ?: 0);
+
     $stats = [
         'artists_new'      => 0,
         'artists_existing' => 0,
         'songs_new'        => 0,
         'songs_existing'   => 0,
-        'detail'           => [],   // artistName => [new, existing]
+        'detail'           => [],
     ];
 
     foreach ($data as $artistName => $songs) {
         $row = $pdo->prepare("SELECT id FROM artists WHERE name = ?");
         $row->execute([$artistName]);
-        $artistId = $row->fetchColumn();
+        $artistId  = $row->fetchColumn();
+        $isNewArtist = !$artistId;
 
         if ($artistId) {
             $stats['artists_existing']++;
@@ -111,6 +122,11 @@ function do_import($pdo, $data, $isDry) {
             if (!$isDry) {
                 $pdo->prepare("INSERT INTO artists (name) VALUES (?)")->execute([$artistName]);
                 $artistId = (int)$pdo->lastInsertId();
+                // 邦楽タグ付与
+                if ($邦楽TagId) {
+                    $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id, tag_id) VALUES (?, ?)")
+                        ->execute([$artistId, $邦楽TagId]);
+                }
             }
             $stats['artists_new']++;
         }
@@ -140,12 +156,16 @@ function do_import($pdo, $data, $isDry) {
             $songNew++;
             $stats['songs_new']++;
         }
-        $stats['detail'][$artistName] = ['new' => $songNew, 'exist' => $songExist, 'id_new' => !$artistId && !$isDry ? false : ($artistId ? false : true)];
+        $stats['detail'][$artistName] = [
+            'new'       => $songNew,
+            'exist'     => $songExist,
+            'is_new_artist' => $isNewArtist,
+        ];
     }
     return $stats;
 }
 
-/* ── ファイル一覧を取得（キャッシュなし、毎回fetch） ── */
+/* ── メイン処理 ── */
 $songFiles   = get_song_files($BASE);
 $importStats = null;
 $parseData   = null;
@@ -172,23 +192,28 @@ if ($srcFile && in_array($srcFile, $songFiles)) {
 <link rel="stylesheet" href="../assets/app.css">
 <style>
 body { background: #f5f5f5; }
-.wrap { max-width: 820px; margin: 0 auto; padding: 20px 16px; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px; }
 h1 { font-size: 18px; margin: 0 0 16px; }
-h2 { font-size: 15px; margin: 16px 0 8px; }
-.file-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.file-btn { display: inline-block; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-weight: 700;
-            border: 1px solid var(--blue-dark); background: #fff; color: var(--blue); text-decoration: none; }
-.file-btn:hover { background: var(--blue); color: #fff; }
-.file-btn.dry { border-color: #888; color: #555; background: #f0f0f0; }
-.result-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-.result-table th, .result-table td { border: 1px solid #ddd; padding: 5px 8px; }
-.result-table th { background: #f0f0f0; }
-.tag-new  { color: #0a0; font-weight: 700; }
-.tag-skip { color: #999; }
-.summary-box { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; }
+h2 { font-size: 15px; margin: 16px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+.file-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.file-pair { display: flex; gap: 4px; }
+.file-btn { display: inline-block; padding: 5px 12px; border-radius: 4px; font-size: 13px; font-weight: 700;
+            border: 1px solid var(--blue-dark); background: #fff; color: var(--blue); text-decoration: none; white-space: nowrap; }
+.file-btn:hover { background: var(--blue); color: #fff; text-decoration: none; }
+.file-btn.dry { border-color: #aaa; color: #666; background: #f4f4f4; font-weight: 400; }
+.file-btn.dry:hover { background: #e0e0e0; color: #333; }
+.result-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.result-table th, .result-table td { border: 1px solid #ddd; padding: 4px 8px; }
+.result-table th { background: #f0f0f0; text-align: left; }
+.tag-new  { color: #080; font-weight: 700; }
+.tag-skip { color: #aaa; }
+.summary-box { background: #fff; border: 2px solid var(--blue); border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; }
 .summary-box p { margin: 4px 0; font-size: 14px; }
-.err { color: #c00; font-weight: 700; }
-.badge-dry { display: inline-block; background: #ff8; border: 1px solid #cc0; border-radius: 3px; padding: 1px 8px; font-size: 12px; margin-left: 8px; }
+.err { color: #c00; font-weight: 700; padding: 10px; background: #fff0f0; border-radius: 4px; }
+.badge-dry { display: inline-block; background: #ff8; border: 1px solid #aa0; border-radius: 3px;
+             padding: 1px 8px; font-size: 12px; margin-left: 8px; color: #660; }
+.badge-new-artist { display: inline-block; background: #dfd; border: 1px solid #080;
+                    border-radius: 3px; padding: 0 5px; font-size: 11px; color: #060; margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -196,9 +221,12 @@ h2 { font-size: 15px; margin: 16px 0 8px; }
   <h1>ady.co.jp 楽曲インポート
     <?php if ($isDry): ?><span class="badge-dry">ドライラン</span><?php endif; ?>
   </h1>
-  <p style="font-size:13px;color:#666;margin:0 0 16px">
+  <p style="font-size:13px;color:#666;margin:0 0 4px">
     <a href="<?= htmlspecialchars($BASE . 'artist.htm') ?>" target="_blank" rel="noopener">ady.co.jp アーティスト一覧</a>
-    からアーティスト・楽曲を差分追加します。ファイルを1つずつ選んで実行してください。
+    からアーティスト・楽曲を差分追加します。
+  </p>
+  <p style="font-size:12px;color:#888;margin:0 0 16px">
+    新規アーティストには自動で「邦楽」タグが付きます。ファイルを1つずつ選んで実行してください。
   </p>
 
   <?php if ($errorMsg): ?>
@@ -206,36 +234,39 @@ h2 { font-size: 15px; margin: 16px 0 8px; }
   <?php endif; ?>
 
   <?php if (!$songFiles): ?>
-    <p class="err">artist.htm の取得に失敗しました。</p>
+    <p class="err">artist.htm の取得に失敗しました。ネットワーク接続を確認してください。</p>
   <?php else: ?>
     <h2>処理するファイルを選択</h2>
     <div class="file-grid">
       <?php foreach ($songFiles as $f): ?>
-        <a href="?file=<?= urlencode($f) ?>" class="file-btn<?= ($f === $srcFile && !$isDry) ? ' is-active' : '' ?>">
-          <?= htmlspecialchars($f) ?>
-        </a>
-        <a href="?file=<?= urlencode($f) ?>&dry=1" class="file-btn dry">
-          <?= htmlspecialchars($f) ?> (dry)
-        </a>
+        <div class="file-pair">
+          <a href="?file=<?= urlencode($f) ?>" class="file-btn"><?= htmlspecialchars($f) ?></a>
+          <a href="?file=<?= urlencode($f) ?>&dry=1" class="file-btn dry">dry</a>
+        </div>
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
 
-  <?php if ($importStats !== null): ?>
+  <?php if ($importStats !== null && $parseData !== null): ?>
     <div class="summary-box">
-      <p><strong>ファイル:</strong> <?= htmlspecialchars($srcFile) ?><?= $isDry ? '（ドライラン・DB変更なし）' : '' ?></p>
+      <p><strong><?= htmlspecialchars($srcFile) ?></strong><?= $isDry ? '（ドライラン・DB変更なし）' : '　実行完了' ?></p>
       <p>アーティスト：新規 <strong class="tag-new"><?= $importStats['artists_new'] ?></strong> 件 ／ 既存スキップ <?= $importStats['artists_existing'] ?> 件</p>
       <p>楽曲：新規 <strong class="tag-new"><?= $importStats['songs_new'] ?></strong> 件 ／ 既存スキップ <?= $importStats['songs_existing'] ?> 件</p>
     </div>
 
-    <h2>詳細</h2>
+    <h2>詳細（<?= count($parseData) ?>アーティスト）</h2>
     <table class="result-table">
-      <thead><tr><th>アーティスト</th><th>新規追加</th><th>スキップ</th></tr></thead>
+      <thead><tr><th>アーティスト</th><th>新規追加曲</th><th>スキップ曲</th></tr></thead>
       <tbody>
       <?php foreach ($parseData as $artistName => $songs): ?>
-        <?php $d = $importStats['detail'][$artistName] ?? ['new'=>0,'exist'=>0]; ?>
+        <?php $d = $importStats['detail'][$artistName] ?? ['new'=>0,'exist'=>0,'is_new_artist'=>false]; ?>
         <tr>
-          <td><?= htmlspecialchars($artistName) ?></td>
+          <td>
+            <?= htmlspecialchars($artistName) ?>
+            <?php if ($d['is_new_artist']): ?>
+              <span class="badge-new-artist">新規アーティスト</span>
+            <?php endif; ?>
+          </td>
           <td class="<?= $d['new'] > 0 ? 'tag-new' : 'tag-skip' ?>"><?= $d['new'] ?></td>
           <td class="tag-skip"><?= $d['exist'] ?></td>
         </tr>
