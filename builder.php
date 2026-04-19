@@ -76,8 +76,10 @@ $sql = "SELECT
             a.fetch_attempts,
             a.last_fetch_at,
             a.fetch_failed,
+            COUNT(DISTINCT s.id) AS song_count,
             GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR ' / ') AS tags
         FROM artists a
+        LEFT JOIN songs s ON s.artist_id = a.id
         LEFT JOIN artist_tags at ON a.id = at.artist_id
         LEFT JOIN tags t ON at.tag_id = t.id";
 if ($keyword !== '') {
@@ -87,7 +89,7 @@ if ($keyword !== '') {
 if ($where) {
     $sql .= ' WHERE ' . implode(' AND ', $where);
 }
-$sql .= ' GROUP BY a.id ORDER BY a.name ASC LIMIT 300';
+$sql .= ' GROUP BY a.id ORDER BY song_count DESC, a.name ASC LIMIT 300';
 $buildTagGroups = function (array $artists): array {
     $allTags = [];
     foreach ($artists as $artist) {
@@ -280,7 +282,12 @@ if ($runAddArtist) {
     </section>
 
     <section class="panel-card">
-        <h2>まとめて楽曲Get！</h2>
+        <h2 style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" id="bulk-get-heading">
+          まとめて楽曲Get！
+          <span id="bulk-get-toggle-icon" style="font-size:14px;color:var(--text-sub)">▼ 開く</span>
+        </h2>
+
+        <div id="bulk-get-body" hidden>
 
         <?php if (!$errorMessage && !$successMessage): // 上で表示済みのため ?>
         <?php endif; ?>
@@ -373,6 +380,7 @@ if ($runAddArtist) {
                 <?php endforeach; ?>
             </div>
         </form>
+        </div><!-- /bulk-get-body -->
     </section>
 
     <!-- ── テーマリスト管理 ── -->
@@ -382,7 +390,7 @@ if ($runAddArtist) {
 
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
           <input type="text" id="theme-list-name" placeholder="特集名（例: 90年代J-POP特集）" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
-          <button class="launch-button" id="create-theme-btn">作成</button>
+          <button class="link-button" id="create-theme-btn" style="background:var(--blue);color:#fff;border-color:var(--blue-dark)">作成</button>
         </div>
 
         <div id="theme-list-wrap">
@@ -710,6 +718,18 @@ document.getElementById('gen-invite-btn').addEventListener('click', function () 
     doSubmit();
   });
 });
+
+/* ── まとめて楽曲Get！ 開閉 ── */
+(function () {
+  var heading = document.getElementById('bulk-get-heading');
+  var body    = document.getElementById('bulk-get-body');
+  var icon    = document.getElementById('bulk-get-toggle-icon');
+  heading.addEventListener('click', function () {
+    var open = body.hidden;
+    body.hidden = !open;
+    icon.textContent = open ? '▲ 閉じる' : '▼ 開く';
+  });
+})();
 
 /* ── テーマリスト作成 ── */
 document.getElementById('create-theme-btn')?.addEventListener('click', async () => {
