@@ -4,22 +4,20 @@ chcp 65001 >nul
 
 cd /d "%~dp0"
 
+echo ==== Stage changes ====
+git add .
+
+set /p msg=Commit message (Enter to skip):
+if "%msg%"=="" (
+  echo No commit message. Skipping commit.
+) else (
+  echo ==== Create commit ====
+  git commit -m "%msg%"
+)
+
 echo ==== Pull latest changes ====
 git pull --rebase
 if errorlevel 1 goto :fail
-
-echo ==== Stage changes ====
-git add .
-if errorlevel 1 goto :fail
-
-set /p msg=Commit message:
-if "%msg%"=="" set msg=Update
-
-echo ==== Create commit ====
-git commit -m "%msg%"
-if errorlevel 1 (
-  echo Commit was skipped or failed.
-)
 
 echo ==== Push ====
 git push
