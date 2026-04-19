@@ -49,8 +49,7 @@ $filled = 0;
 $skipped = 0;
 
 if (isset($_GET['run']) || $isDry) {
-    $rows = $pdo->prepare("SELECT id, title FROM songs WHERE title_reading IS NULL LIMIT ?");
-    $rows->execute([$limit]);
+    $rows = $pdo->query("SELECT id, title FROM songs WHERE title_reading IS NULL LIMIT " . (int)$limit);
     $songs = $rows->fetchAll();
 
     foreach ($songs as $s) {
