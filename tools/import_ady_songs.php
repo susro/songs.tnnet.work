@@ -95,6 +95,30 @@ function parse_song_page($html) {
     return $results;
 }
 
+/* ── 読み仮名を推定（カナ名 or iTunes API） ── */
+function guess_reading($artistName) {
+    // 全角カナ・ひらがな・長音符・スペースのみで構成されていればひらがなに変換
+    if (preg_match('/^[ぁ-んァ-ヶーｦ-ﾟ\s　]+$/u', $artistName)) {
+        return mb_convert_kana($artistName, 'c', 'UTF-8'); // カタカナ→ひらがな
+    }
+    // iTunes API で検索し、カナ結果なら採用
+    $url = 'https://itunes.apple.com/search?' . http_build_query([
+        'term'    => $artistName,
+        'country' => 'jp',
+        'entity'  => 'musicArtist',
+        'limit'   => 1,
+    ]);
+    $json = @file_get_contents($url);
+    if (!$json) return null;
+    $data = json_decode($json, true);
+    $suggested = trim((string)($data['results'][0]['artistName'] ?? ''));
+    if ($suggested !== '' && $suggested !== $artistName
+        && preg_match('/^[ぁ-んァ-ヶーｦ-ﾟ\s　]+$/u', $suggested)) {
+        return mb_convert_kana($suggested, 'c', 'UTF-8');
+    }
+    return null;
+}
+
 /* ── DB取り込み ── */
 function do_import($pdo, $data, $isDry) {
     // 邦楽タグID取得
@@ -119,8 +143,10 @@ function do_import($pdo, $data, $isDry) {
         if ($artistId) {
             $stats['artists_existing']++;
         } else {
+            $reading = guess_reading($artistName);
             if (!$isDry) {
-                $pdo->prepare("INSERT INTO artists (name) VALUES (?)")->execute([$artistName]);
+                $pdo->prepare("INSERT INTO artists (name, reading) VALUES (?, ?)")
+                    ->execute([$artistName, $reading]);
                 $artistId = (int)$pdo->lastInsertId();
                 // 邦楽タグ付与
                 if ($邦楽TagId) {
@@ -157,9 +183,10 @@ function do_import($pdo, $data, $isDry) {
             $stats['songs_new']++;
         }
         $stats['detail'][$artistName] = [
-            'new'       => $songNew,
-            'exist'     => $songExist,
-            'is_new_artist' => $isNewArtist,
+            'new'            => $songNew,
+            'exist'          => $songExist,
+            'is_new_artist'  => $isNewArtist,
+            'reading'        => $isNewArtist ? ($reading ?? null) : null,
         ];
     }
     return $stats;
@@ -256,16 +283,19 @@ h2 { font-size: 15px; margin: 16px 0 8px; border-bottom: 1px solid #ddd; padding
 
     <h2>詳細（<?= count($parseData) ?>アーティスト）</h2>
     <table class="result-table">
-      <thead><tr><th>アーティスト</th><th>新規追加曲</th><th>スキップ曲</th></tr></thead>
+      <thead><tr><th>アーティスト</th><th>読み仮名</th><th>新規追加曲</th><th>スキップ曲</th></tr></thead>
       <tbody>
       <?php foreach ($parseData as $artistName => $songs): ?>
-        <?php $d = $importStats['detail'][$artistName] ?? ['new'=>0,'exist'=>0,'is_new_artist'=>false]; ?>
+        <?php $d = $importStats['detail'][$artistName] ?? ['new'=>0,'exist'=>0,'is_new_artist'=>false,'reading'=>null]; ?>
         <tr>
           <td>
             <?= htmlspecialchars($artistName) ?>
             <?php if ($d['is_new_artist']): ?>
-              <span class="badge-new-artist">新規アーティスト</span>
+              <span class="badge-new-artist">新規</span>
             <?php endif; ?>
+          </td>
+          <td style="font-size:12px;color:#555">
+            <?= $d['reading'] ? htmlspecialchars($d['reading']) : '<span style="color:#ccc">—</span>' ?>
           </td>
           <td class="<?= $d['new'] > 0 ? 'tag-new' : 'tag-skip' ?>"><?= $d['new'] ?></td>
           <td class="tag-skip"><?= $d['exist'] ?></td>
