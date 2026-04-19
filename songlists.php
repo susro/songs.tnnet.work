@@ -47,14 +47,26 @@ if ($id) {
 if (!$detail) {
     $listStmt = $pdo->prepare("
         SELECT sl.id, sl.name, sl.memo, sl.updated_at,
+               sl.list_type, sl.filter_config,
                COUNT(ss.song_id) AS song_count
         FROM songlists sl
-        LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id
+        LEFT JOIN songlist_songs ss ON sl.id = ss.songlist_id AND sl.list_type = 'static'
         WHERE sl.user_id = ?
-        GROUP BY sl.id ORDER BY sl.updated_at DESC
+        GROUP BY sl.id ORDER BY sl.list_type DESC, sl.updated_at DESC
     ");
     $listStmt->execute([$me['id']]);
     $lists = $listStmt->fetchAll();
+    foreach ($lists as &$sl) {
+        if ($sl['list_type'] === 'dynamic') {
+            $cfg = json_decode($sl['filter_config'] ?? '{}', true);
+            if (!empty($cfg['personal_tag'])) {
+                $c = $pdo->prepare("SELECT COUNT(*) FROM song_tags st JOIN tags t ON st.tag_id=t.id WHERE t.name=? AND st.user_id=?");
+                $c->execute([$cfg['personal_tag'], $me['id']]);
+                $sl['song_count'] = (int)$c->fetchColumn();
+            }
+        }
+    }
+    unset($sl);
 }
 ?>
 <!DOCTYPE html>
