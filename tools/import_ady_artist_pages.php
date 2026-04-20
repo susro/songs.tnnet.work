@@ -114,6 +114,31 @@ function get_album_year($artistName, $albumName) {
 $specialPages = find_special_pages($BASE, $MAIN_FILES);
 $previewData  = null;
 $importResult = null;
+$tagAllResult = null;
+
+/* ── 全員にどメジャータグ一括付与 ── */
+if (isset($_GET['tag_all'])) {
+    $dmRow = $pdo->prepare("SELECT id FROM tags WHERE name='どメジャー' LIMIT 1");
+    $dmRow->execute();
+    $dmTagId = (int)($dmRow->fetchColumn() ?: 0);
+    if (!$dmTagId) {
+        $pdo->prepare("INSERT INTO tags (name, tag_category, type) VALUES ('どメジャー','system','artist')")->execute();
+        $dmTagId = (int)$pdo->lastInsertId();
+    }
+    $tagged = 0; $notFound = [];
+    foreach ($specialPages as $artistName) {
+        $aRow = $pdo->prepare("SELECT id FROM artists WHERE name=?");
+        $aRow->execute([$artistName]);
+        $aid = (int)($aRow->fetchColumn() ?: 0);
+        if ($aid) {
+            $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$aid, $dmTagId]);
+            $tagged++;
+        } else {
+            $notFound[] = $artistName;
+        }
+    }
+    $tagAllResult = ['tagged' => $tagged, 'not_found' => $notFound];
+}
 
 if ($srcFile && isset($specialPages[$srcFile])) {
     $artistName = $specialPages[$srcFile];
@@ -239,6 +264,15 @@ th { background:#f5f5f5; }
   <?php if ($isDry && $srcFile): ?><span class="badge-dry">ドライラン</span><?php endif; ?>
 </h1>
 
+<?php if ($tagAllResult): ?>
+  <div class="summary">
+    <p>✓ <strong>どメジャー</strong>タグ付与完了：<strong class="new"><?= $tagAllResult['tagged'] ?></strong>名</p>
+    <?php if ($tagAllResult['not_found']): ?>
+      <p style="color:#a00">DB未登録（スキップ）：<?= implode('、', array_map('htmlspecialchars', $tagAllResult['not_found'])) ?></p>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
 <?php if ($importResult): ?>
   <div class="summary">
     <p>✓ <strong><?= htmlspecialchars($specialPages[$srcFile] ?? $srcFile) ?></strong> インポート完了</p>
@@ -249,6 +283,11 @@ th { background:#f5f5f5; }
 
 <?php if (!$srcFile || (!$isDry && !$importResult)): ?>
   <h2>特設アーティスト一覧（<?= count($specialPages) ?>組）</h2>
+  <p style="margin:0 0 10px">
+    <a href="?tag_all=1" class="ap" style="display:inline-flex"
+       onclick="return confirm('DB登録済みの全特設アーティストに「どメジャー」タグを付与します。よろしいですか？')"
+       ><span style="display:inline-block;padding:5px 14px;border-radius:4px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;text-decoration:none">全員にどメジャータグ付与</span></a>
+  </p>
   <div class="artist-grid">
     <?php foreach ($specialPages as $file => $name): ?>
       <div class="ap">
