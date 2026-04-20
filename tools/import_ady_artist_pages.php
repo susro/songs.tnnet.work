@@ -59,41 +59,53 @@ function find_special_pages($base, $mainFiles) {
 /* ── 特設ページをパース → ['albumName' => [songs]] ── */
 function parse_special_page($html) {
     $albums = [];
-    $curAlbum = null;
 
-    preg_match_all('/<TR\b[^>]*>(.*?)<\/TR>/si', $html, $trs);
-    foreach ($trs[1] as $row) {
-        // アルバムヘッダ: #ffff71 かつ <A name= なし
-        if (stripos($row, '#ffff71') !== false && !preg_match('/<A\s+name=/i', $row)) {
-            if (preg_match('/<B>([^<]+)<\/B>/i', $row, $am)) {
-                $curAlbum = trim(html_entity_decode($am[1], ENT_QUOTES, 'UTF-8'));
-                if (!isset($albums[$curAlbum])) $albums[$curAlbum] = [];
+    // 2カラムレイアウト対応: ネストしていない innermost TABLE 単位でパース
+    preg_match_all('/<TABLE\b[^>]*>((?:(?!<TABLE\b)[\s\S])*?)<\/TABLE>/i', $html, $tm);
+
+    foreach ($tm[0] as $tableHtml) {
+        if (stripos($tableHtml, '#ffff71') === false) continue;
+
+        $curAlbum = null;
+        preg_match_all('/<TR\b[^>]*>(.*?)<\/TR>/si', $tableHtml, $trs);
+        foreach ($trs[1] as $row) {
+            // アルバムヘッダ: #ffff71 かつ <A name= なし
+            if (stripos($row, '#ffff71') !== false && !preg_match('/<A\s+name=/i', $row)) {
+                if (preg_match('/<B>([^<]+)<\/B>/i', $row, $am)) {
+                    $curAlbum = trim(html_entity_decode($am[1], ENT_QUOTES, 'UTF-8'));
+                    if (!isset($albums[$curAlbum])) $albums[$curAlbum] = [];
+                }
+                continue;
             }
-            continue;
+            if ($curAlbum === null) continue;
+
+            // 楽曲行: #ddffff を含む
+            if (stripos($row, '#ddffff') === false) continue;
+            preg_match_all('/<TD\b[^>]*bgcolor="#ddffff"[^>]*>(.*?)<\/TD>/si', $row, $cm);
+            if (empty($cm[1])) continue;
+            $title = trim(strip_tags($cm[1][0]));
+            if ($title === '') continue;
+
+            $chordUrl = '';
+            if (preg_match('/href="(kessai\/[^"]+\.htm)"/i', $row, $hm)) $chordUrl = $hm[1];
+
+            $difficulty = '';
+            preg_match_all('/<TD\b([^>]*)>(.*?)<\/TD>/si', $row, $allTds, PREG_SET_ORDER);
+            foreach (array_reverse($allTds) as $td) {
+                if (stripos($td[1], 'bgcolor') !== false) continue;
+                $t = trim(strip_tags($td[2]));
+                if (strlen($t) === 1 && in_array($t, ['A','B','C'])) { $difficulty = $t; break; }
+            }
+
+            $albums[$curAlbum][] = ['title' => $title, 'difficulty' => $difficulty ?: null, 'chord_url' => $chordUrl ?: null];
         }
-        if ($curAlbum === null) continue;
-
-        // 楽曲行: #ddffff を含む
-        if (stripos($row, '#ddffff') === false) continue;
-        preg_match_all('/<TD\b[^>]*bgcolor="#ddffff"[^>]*>(.*?)<\/TD>/si', $row, $cm);
-        if (empty($cm[1])) continue;
-        $title = trim(strip_tags($cm[1][0]));
-        if ($title === '') continue;
-
-        $chordUrl = '';
-        if (preg_match('/href="(kessai\/[^"]+\.htm)"/i', $row, $hm)) $chordUrl = $hm[1];
-
-        $difficulty = '';
-        preg_match_all('/<TD\b([^>]*)>(.*?)<\/TD>/si', $row, $allTds, PREG_SET_ORDER);
-        foreach (array_reverse($allTds) as $td) {
-            if (stripos($td[1], 'bgcolor') !== false) continue;
-            $t = trim(strip_tags($td[2]));
-            if (strlen($t) === 1 && in_array($t, ['A','B','C'])) { $difficulty = $t; break; }
-        }
-
-        $albums[$curAlbum][] = ['title' => $title, 'difficulty' => $difficulty ?: null, 'chord_url' => $chordUrl ?: null];
     }
     return array_filter($albums, function($s) { return count($s) > 0; });
+}
+
+/* ── 年を付けないアルバム名パターン ── */
+function album_skip_year($albumName) {
+    return preg_match('/^(シングル|その他)/u', $albumName);
 }
 
 /* ── iTunes API でアルバム発表年を取得 ── */
@@ -152,9 +164,10 @@ if ($srcFile && isset($specialPages[$srcFile])) {
         $aRow->execute([$artistName]);
         $artistId = $aRow->fetchColumn() ?: null;
 
-        // アルバムごとに iTunes で年を取得
+        // アルバムごとに iTunes で年を取得（シングル・その他はスキップ）
         $albumYears = [];
         foreach (array_keys($albums) as $albumName) {
+            if (album_skip_year($albumName)) { $albumYears[$albumName] = null; continue; }
             $albumYears[$albumName] = get_album_year($artistName, $albumName);
             usleep(200000);
         }
