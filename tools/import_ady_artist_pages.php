@@ -159,6 +159,14 @@ if ($srcFile && isset($specialPages[$srcFile])) {
         // 実行モード
         if (!$isDry) {
             $newArtist = false;
+            // どメジャータグID（なければ作成）
+            $dmRow = $pdo->prepare("SELECT id FROM tags WHERE name='どメジャー' LIMIT 1");
+            $dmRow->execute();
+            $dmTagId = (int)($dmRow->fetchColumn() ?: 0);
+            if (!$dmTagId) {
+                $pdo->prepare("INSERT INTO tags (name, tag_category, type) VALUES ('どメジャー','system','artist')")->execute();
+                $dmTagId = (int)$pdo->lastInsertId();
+            }
             if (!$artistId) {
                 $pdo->prepare("INSERT INTO artists (name) VALUES (?)")->execute([$artistName]);
                 $artistId = (int)$pdo->lastInsertId();
@@ -169,6 +177,8 @@ if ($srcFile && isset($specialPages[$srcFile])) {
                 if ($tagId) $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$artistId,$tagId]);
                 $newArtist = true;
             }
+            // どメジャータグ付与（新規・既存アーティスト両方）
+            if ($dmTagId) $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$artistId,$dmTagId]);
             $inserted = 0; $skipped = 0;
             foreach ($albums as $albumName => $songs) {
                 $year = $albumYears[$albumName] ?? null;
