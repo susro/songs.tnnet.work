@@ -60,46 +60,93 @@ function find_special_pages($base, $mainFiles) {
 function parse_special_page($html) {
     $albums = [];
 
-    // 2カラムレイアウト対応: ネストしていない innermost TABLE 単位でパース
-    preg_match_all('/<TABLE\b[^>]*>((?:(?!<TABLE\b)[\s\S])*?)<\/TABLE>/i', $html, $tm);
+    // DOMDocument で正確にネスト構造をたどる（2カラムレイアウト対応）
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+    libxml_clear_errors();
 
-    foreach ($tm[0] as $tableHtml) {
-        if (stripos($tableHtml, '#ffff71') === false) continue;
+    $curAlbum = null;
+    $trackNo  = 0;
 
-        $curAlbum = null;
-        preg_match_all('/<TR\b[^>]*>(.*?)<\/TR>/si', $tableHtml, $trs);
-        foreach ($trs[1] as $row) {
-            // アルバムヘッダ: #ffff71 かつ <A name= なし
-            if (stripos($row, '#ffff71') !== false && !preg_match('/<A\s+name=/i', $row)) {
-                if (preg_match('/<B>([^<]+)<\/B>/i', $row, $am)) {
-                    $curAlbum = trim(html_entity_decode($am[1], ENT_QUOTES, 'UTF-8'));
+    foreach ($dom->getElementsByTagName('tr') as $tr) {
+        // TR 直下 TD の bgcolor を収集（ネスト先は見ない）
+        $bgSet = [];
+        $trBg  = strtolower(ltrim($tr->getAttribute('bgcolor'), '#'));
+        if ($trBg) $bgSet[] = $trBg;
+        foreach ($tr->childNodes as $node) {
+            if ($node->nodeType !== XML_ELEMENT_NODE || strtolower($node->nodeName) !== 'td') continue;
+            $tdBg = strtolower(ltrim($node->getAttribute('bgcolor'), '#'));
+            if ($tdBg) $bgSet[] = $tdBg;
+        }
+
+        $hasYellow = in_array('ffff71', $bgSet);
+        $hasBlue   = in_array('ddffff', $bgSet);
+
+        if ($hasYellow) {
+            // <A name= があるならメインページのアーティスト見出し行 → スキップ
+            $hasAName = false;
+            foreach ($tr->getElementsByTagName('a') as $a) {
+                if ($a->hasAttribute('name')) { $hasAName = true; break; }
+            }
+            if ($hasAName) continue;
+
+            $bs = $tr->getElementsByTagName('b');
+            if ($bs->length > 0) {
+                $name = trim($bs->item(0)->textContent);
+                if ($name !== '') {
+                    $curAlbum = $name;
+                    $trackNo  = 0;
                     if (!isset($albums[$curAlbum])) $albums[$curAlbum] = [];
                 }
-                continue;
             }
-            if ($curAlbum === null) continue;
-
-            // 楽曲行: #ddffff を含む
-            if (stripos($row, '#ddffff') === false) continue;
-            preg_match_all('/<TD\b[^>]*bgcolor="#ddffff"[^>]*>(.*?)<\/TD>/si', $row, $cm);
-            if (empty($cm[1])) continue;
-            $title = trim(strip_tags($cm[1][0]));
-            if ($title === '') continue;
-
-            $chordUrl = '';
-            if (preg_match('/href="(kessai\/[^"]+\.htm)"/i', $row, $hm)) $chordUrl = $hm[1];
-
-            $difficulty = '';
-            preg_match_all('/<TD\b([^>]*)>(.*?)<\/TD>/si', $row, $allTds, PREG_SET_ORDER);
-            foreach (array_reverse($allTds) as $td) {
-                if (stripos($td[1], 'bgcolor') !== false) continue;
-                $t = trim(strip_tags($td[2]));
-                if (strlen($t) === 1 && in_array($t, ['A','B','C'])) { $difficulty = $t; break; }
-            }
-
-            $albums[$curAlbum][] = ['title' => $title, 'difficulty' => $difficulty ?: null, 'chord_url' => $chordUrl ?: null];
+            continue;
         }
+
+        if (!$hasBlue || $curAlbum === null) continue;
+
+        // 曲名: 直下 TD で bgcolor="#ddffff" の最初
+        $titleTd = null;
+        foreach ($tr->childNodes as $node) {
+            if ($node->nodeType !== XML_ELEMENT_NODE || strtolower($node->nodeName) !== 'td') continue;
+            if (strtolower(ltrim($node->getAttribute('bgcolor'), '#')) === 'ddffff') {
+                $titleTd = $node; break;
+            }
+        }
+        if (!$titleTd) continue;
+        $title = trim($titleTd->textContent);
+        if ($title === '') continue;
+
+        // コード譜 URL
+        $chordUrl = '';
+        foreach ($tr->getElementsByTagName('a') as $a) {
+            $href = $a->getAttribute('href');
+            if (preg_match('#^kessai/.+\.htm$#i', $href)) { $chordUrl = $href; break; }
+        }
+
+        // 難易度: 直下 TD で bgcolor なし、末尾から A/B/C を探す
+        $difficulty = '';
+        $directTds  = [];
+        foreach ($tr->childNodes as $node) {
+            if ($node->nodeType === XML_ELEMENT_NODE && strtolower($node->nodeName) === 'td') {
+                $directTds[] = $node;
+            }
+        }
+        foreach (array_reverse($directTds) as $td) {
+            if ($td->getAttribute('bgcolor')) continue;
+            $t = trim($td->textContent);
+            if (strlen($t) === 1 && in_array($t, ['A','B','C'])) { $difficulty = $t; break; }
+        }
+
+        $trackNo++;
+        $albums[$curAlbum][] = [
+            'title'      => $title,
+            'track_no'   => $trackNo,
+            'difficulty' => $difficulty ?: null,
+            'chord_url'  => $chordUrl ?: null,
+        ];
     }
+
     return array_filter($albums, function($s) { return count($s) > 0; });
 }
 
@@ -253,8 +300,8 @@ if ($srcFile && isset($specialPages[$srcFile])) {
                     $chk = $pdo->prepare("SELECT id FROM songs WHERE title=? AND artist_id=?");
                     $chk->execute([$s['title'], $artistId]);
                     if ($chk->fetchColumn()) { $skipped++; continue; }
-                    $pdo->prepare("INSERT INTO songs (title, artist_id, album_name, release_year, chord_difficulty, chord_url) VALUES (?,?,?,?,?,?)")
-                        ->execute([$s['title'], $artistId, $albumName, $year, $s['difficulty'], $s['chord_url']]);
+                    $pdo->prepare("INSERT INTO songs (title, artist_id, album_name, track_no, release_year, chord_difficulty, chord_url) VALUES (?,?,?,?,?,?,?)")
+                        ->execute([$s['title'], $artistId, $albumName, $s['track_no'], $year, $s['difficulty'], $s['chord_url']]);
                     $inserted++;
                 }
             }
@@ -378,10 +425,11 @@ th { background:#f5f5f5; }
       </div>
       <?php $hasSongYear = ($albumData['year'] === null); ?>
       <table>
-        <thead><tr><th>曲名</th><th>難易度</th><?php if ($hasSongYear): ?><th>年</th><?php endif; ?><th>状態</th></tr></thead>
+        <thead><tr><th>#</th><th>曲名</th><th>難易度</th><?php if ($hasSongYear): ?><th>年</th><?php endif; ?><th>状態</th></tr></thead>
         <tbody>
         <?php foreach ($albumData['songs'] as $s): ?>
           <tr>
+            <td style="color:#bbb;text-align:right"><?= (int)($s['track_no'] ?? 0) ?></td>
             <td><?= htmlspecialchars($s['title']) ?></td>
             <td class="diff-<?= htmlspecialchars($s['difficulty'] ?? '') ?>"><?= htmlspecialchars($s['difficulty'] ?? '—') ?></td>
             <?php if ($hasSongYear): ?>
