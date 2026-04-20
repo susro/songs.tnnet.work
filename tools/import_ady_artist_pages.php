@@ -61,9 +61,11 @@ function parse_special_page($html) {
     $albums = [];
 
     // DOMDocument で正確にネスト構造をたどる（2カラムレイアウト対応）
+    // HTML 内の charset 宣言を UTF-8 に書き換えてから渡す（CP932→UTF-8変換済みのため）
+    $htmlForDom = preg_replace('/<meta\b[^>]*\bcharset\b[^>]*>/i', '<meta charset="UTF-8">', $html);
     $dom = new DOMDocument();
     libxml_use_internal_errors(true);
-    $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+    $dom->loadHTML($htmlForDom);
     libxml_clear_errors();
 
     $curAlbum = null;
