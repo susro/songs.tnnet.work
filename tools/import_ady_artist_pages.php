@@ -122,6 +122,20 @@ function get_album_year($artistName, $albumName) {
     return null;
 }
 
+/* ── iTunes API で曲単位の発表年を取得（シングル等用） ── */
+function get_song_year($artistName, $songTitle) {
+    $url = 'https://itunes.apple.com/search?' . http_build_query([
+        'term' => $artistName . ' ' . $songTitle, 'country' => 'jp', 'entity' => 'song', 'limit' => 3,
+    ]);
+    $json = @file_get_contents($url);
+    if (!$json) return null;
+    $data = json_decode($json, true);
+    foreach ($data['results'] ?? [] as $r) {
+        if (!empty($r['releaseDate'])) return (int)substr($r['releaseDate'], 0, 4);
+    }
+    return null;
+}
+
 /* ── メイン ── */
 $specialPages = find_special_pages($BASE, $MAIN_FILES);
 $previewData  = null;
@@ -164,12 +178,21 @@ if ($srcFile && isset($specialPages[$srcFile])) {
         $aRow->execute([$artistName]);
         $artistId = $aRow->fetchColumn() ?: null;
 
-        // アルバムごとに iTunes で年を取得（シングル・その他はスキップ）
+        // アルバムごとに iTunes で年を取得
+        // シングル・その他は曲単位で試みる（取れなければ null）
         $albumYears = [];
-        foreach (array_keys($albums) as $albumName) {
-            if (album_skip_year($albumName)) { $albumYears[$albumName] = null; continue; }
-            $albumYears[$albumName] = get_album_year($artistName, $albumName);
-            usleep(200000);
+        $songYears  = []; // [albumName][title] => year（曲単位年）
+        foreach ($albums as $albumName => $songs) {
+            if (album_skip_year($albumName)) {
+                $albumYears[$albumName] = null;
+                foreach ($songs as $s) {
+                    $songYears[$albumName][$s['title']] = get_song_year($artistName, $s['title']);
+                    usleep(200000);
+                }
+            } else {
+                $albumYears[$albumName] = get_album_year($artistName, $albumName);
+                usleep(200000);
+            }
         }
 
         // 各曲が既存かチェック
@@ -180,9 +203,12 @@ if ($srcFile && isset($specialPages[$srcFile])) {
             'albums'     => [],
         ];
         foreach ($albums as $albumName => $songs) {
-            $year = $albumYears[$albumName] ?? null;
+            $albumYear = $albumYears[$albumName] ?? null;
             $songRows = [];
             foreach ($songs as $s) {
+                $year = isset($songYears[$albumName])
+                    ? ($songYears[$albumName][$s['title']] ?? null)
+                    : $albumYear;
                 $exists = false;
                 if ($artistId) {
                     $chk = $pdo->prepare("SELECT id FROM songs WHERE title=? AND artist_id=?");
@@ -191,7 +217,7 @@ if ($srcFile && isset($specialPages[$srcFile])) {
                 }
                 $songRows[] = array_merge($s, ['exists' => $exists, 'year' => $year]);
             }
-            $previewData['albums'][$albumName] = ['year' => $year, 'songs' => $songRows];
+            $previewData['albums'][$albumName] = ['year' => $albumYear, 'songs' => $songRows];
         }
 
         // 実行モード
@@ -219,8 +245,11 @@ if ($srcFile && isset($specialPages[$srcFile])) {
             if ($dmTagId) $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$artistId,$dmTagId]);
             $inserted = 0; $skipped = 0;
             foreach ($albums as $albumName => $songs) {
-                $year = $albumYears[$albumName] ?? null;
+                $albumYear = $albumYears[$albumName] ?? null;
                 foreach ($songs as $s) {
+                    $year = isset($songYears[$albumName])
+                        ? ($songYears[$albumName][$s['title']] ?? null)
+                        : $albumYear;
                     $chk = $pdo->prepare("SELECT id FROM songs WHERE title=? AND artist_id=?");
                     $chk->execute([$s['title'], $artistId]);
                     if ($chk->fetchColumn()) { $skipped++; continue; }
@@ -347,13 +376,17 @@ th { background:#f5f5f5; }
         <?php endif; ?>
         <span style="color:#999;font-size:12px;font-weight:400"><?= count($albumData['songs']) ?>曲</span>
       </div>
+      <?php $hasSongYear = ($albumData['year'] === null); ?>
       <table>
-        <thead><tr><th>曲名</th><th>難易度</th><th>状態</th></tr></thead>
+        <thead><tr><th>曲名</th><th>難易度</th><?php if ($hasSongYear): ?><th>年</th><?php endif; ?><th>状態</th></tr></thead>
         <tbody>
         <?php foreach ($albumData['songs'] as $s): ?>
           <tr>
             <td><?= htmlspecialchars($s['title']) ?></td>
             <td class="diff-<?= htmlspecialchars($s['difficulty'] ?? '') ?>"><?= htmlspecialchars($s['difficulty'] ?? '—') ?></td>
+            <?php if ($hasSongYear): ?>
+              <td><?= $s['year'] ? '<span class="year-badge">'.$s['year'].'年</span>' : '<span class="year-none">—</span>' ?></td>
+            <?php endif; ?>
             <td class="<?= $s['exists'] ? 'skip' : 'new' ?>"><?= $s['exists'] ? 'スキップ' : '新規' ?></td>
           </tr>
         <?php endforeach; ?>
