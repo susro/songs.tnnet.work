@@ -11,8 +11,9 @@ $MAIN_FILES = ['a.htm','i.htm','ue.htm','o.htm','kaki.htm','kukeko.htm','sa.htm'
                'artist.htm','index.htm','index.html','first.htm','set.htm',
                'mailform.htm','chorditiran.htm'];
 
-$isDry   = isset($_GET['dry']);
-$srcFile = preg_replace('/[^a-z0-9\'._-]/i', '', trim($_GET['file'] ?? ''));
+$isDry      = isset($_GET['dry']);
+$isBulkJson = isset($_GET['bulk_json']);
+$srcFile    = preg_replace('/[^a-z0-9\'._-]/i', '', trim($_GET['file'] ?? ''));
 
 /* ── fetch ── */
 function apf_fetch($url) {
@@ -222,6 +223,14 @@ if ($srcFile && isset($specialPages[$srcFile])) {
     if ($html) {
         $albums = parse_special_page($html);
 
+        // シングル・その他はアルバム内順番に意味がないのでtrack_no を null に
+        foreach ($albums as $albumName => &$songList) {
+            if (album_skip_year($albumName)) {
+                foreach ($songList as &$s) { $s['track_no'] = null; }
+            }
+        }
+        unset($songList, $s);
+
         // DB上のアーティストID確認
         $aRow = $pdo->prepare("SELECT id FROM artists WHERE name=?");
         $aRow->execute([$artistName]);
@@ -269,7 +278,7 @@ if ($srcFile && isset($specialPages[$srcFile])) {
             $previewData['albums'][$albumName] = ['year' => $albumYear, 'songs' => $songRows];
         }
 
-        // 実行モード
+        // 実行モード（通常 or bulk_json）
         if (!$isDry) {
             $newArtist = false;
             // どメジャータグID（なければ作成）
@@ -280,20 +289,24 @@ if ($srcFile && isset($specialPages[$srcFile])) {
                 $pdo->prepare("INSERT INTO tags (name, tag_category, type) VALUES ('どメジャー','system','artist')")->execute();
                 $dmTagId = (int)$pdo->lastInsertId();
             }
+            // 邦楽タグID
+            $tRow = $pdo->prepare("SELECT id FROM tags WHERE name='邦楽' LIMIT 1");
+            $tRow->execute();
+            $hTagId = (int)($tRow->fetchColumn() ?: 0);
             if (!$artistId) {
                 $pdo->prepare("INSERT INTO artists (name) VALUES (?)")->execute([$artistName]);
                 $artistId = (int)$pdo->lastInsertId();
-                // 邦楽タグ
-                $tRow = $pdo->prepare("SELECT id FROM tags WHERE name='邦楽' LIMIT 1");
-                $tRow->execute();
-                $tagId = (int)($tRow->fetchColumn() ?: 0);
-                if ($tagId) $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$artistId,$tagId]);
                 $newArtist = true;
             }
-            // どメジャータグ付与（新規・既存アーティスト両方）
+            // 邦楽・どメジャータグ付与（新規・既存両方）
+            if ($hTagId)  $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$artistId,$hTagId]);
             if ($dmTagId) $pdo->prepare("INSERT IGNORE INTO artist_tags (artist_id,tag_id) VALUES (?,?)")->execute([$artistId,$dmTagId]);
+            // アルバム版優先: 通常アルバムを先に処理してからシングル・その他
+            $orderedAlbums = [];
+            foreach ($albums as $k => $v) { if (!album_skip_year($k)) $orderedAlbums[$k] = $v; }
+            foreach ($albums as $k => $v) { if (album_skip_year($k))  $orderedAlbums[$k] = $v; }
             $inserted = 0; $skipped = 0;
-            foreach ($albums as $albumName => $songs) {
+            foreach ($orderedAlbums as $albumName => $songs) {
                 $albumYear = $albumYears[$albumName] ?? null;
                 foreach ($songs as $s) {
                     $year = isset($songYears[$albumName])
@@ -308,6 +321,19 @@ if ($srcFile && isset($specialPages[$srcFile])) {
                 }
             }
             $importResult = ['new_artist' => $newArtist, 'inserted' => $inserted, 'skipped' => $skipped];
+
+            // bulk_json モードは JSON を返して終了
+            if ($isBulkJson) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok'         => true,
+                    'artist'     => $artistName,
+                    'new_artist' => $newArtist,
+                    'inserted'   => $inserted,
+                    'skipped'    => $skipped,
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
         }
     }
 }
@@ -347,9 +373,27 @@ th { background:#f5f5f5; }
 .diff-A { color:#155724; font-weight:700; }
 .diff-B { color:#856404; font-weight:700; }
 .diff-C { color:#721c24; font-weight:700; }
+/* ローディングオーバーレイ */
+#loading-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+  z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+#loading-overlay.show { display:flex; }
+.spinner { width:44px; height:44px; border:5px solid #fff3; border-top-color:#fff;
+  border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-text { color:#fff; font-size:15px; font-weight:700; }
+/* 一括取り込み進捗 */
+#bulk-wrap { background:#fff; border:1px solid #ddd; border-radius:6px; padding:12px 16px; margin-top:12px; display:none; }
+#bulk-progress { width:100%; height:18px; margin:6px 0; }
+#bulk-log { max-height:220px; overflow-y:auto; font-size:12px; color:#444; }
+#bulk-log p { margin:2px 0; }
+.btn-stop { background:#c00; color:#fff; border:none; border-radius:4px; padding:5px 16px; font-size:13px; font-weight:700; cursor:pointer; margin-top:6px; }
 </style>
 </head>
 <body>
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">収集中…しばらくお待ちください</div>
+</div>
 <div class="wrap">
 <h1>ady 特設アーティストページ インポート
   <?php if ($isDry && $srcFile): ?><span class="badge-dry">ドライラン</span><?php endif; ?>
@@ -374,16 +418,23 @@ th { background:#f5f5f5; }
 
 <?php if (!$srcFile || (!$isDry && !$importResult)): ?>
   <h2>特設アーティスト一覧（<?= count($specialPages) ?>組）</h2>
-  <p style="margin:0 0 10px">
-    <a href="?tag_all=1" class="ap" style="display:inline-flex"
+  <p style="margin:0 0 8px;display:flex;gap:8px;flex-wrap:wrap">
+    <a href="?tag_all=1"
        onclick="return confirm('DB登録済みの全特設アーティストに「どメジャー」タグを付与します。よろしいですか？')"
-       ><span style="display:inline-block;padding:5px 14px;border-radius:4px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;text-decoration:none">全員にどメジャータグ付与</span></a>
+       style="display:inline-block;padding:5px 14px;border-radius:4px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;text-decoration:none">全員にどメジャータグ付与</a>
+    <button onclick="startBulkImport()" style="padding:5px 14px;border-radius:4px;background:#c60;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">全アーティスト一括取り込み</button>
   </p>
+  <div id="bulk-wrap">
+    <p style="font-size:13px;margin:0 0 4px"><strong id="bulk-status">準備中…</strong></p>
+    <progress id="bulk-progress" value="0" max="<?= count($specialPages) ?>"></progress>
+    <button class="btn-stop" onclick="bulkStop=true">停止</button>
+    <div id="bulk-log"></div>
+  </div>
   <div class="artist-grid">
     <?php foreach ($specialPages as $file => $name): ?>
       <div class="ap">
-        <a href="?file=<?= urlencode($file) ?>&dry=1" class="run"><?= htmlspecialchars($name) ?></a>
-        <a href="?file=<?= urlencode($file) ?>&dry=1" class="dry">dry</a>
+        <a href="?file=<?= urlencode($file) ?>&dry=1" class="run" onclick="showLoading()"><?= htmlspecialchars($name) ?></a>
+        <a href="?file=<?= urlencode($file) ?>&dry=1" class="dry" onclick="showLoading()">dry</a>
       </div>
     <?php endforeach; ?>
   </div>
@@ -406,7 +457,7 @@ th { background:#f5f5f5; }
     <p>アルバム <?= count($previewData['albums']) ?>枚 ／ 新規追加予定: <strong class="new"><?= $totalNew ?></strong>曲 ／ 既存スキップ: <?= $totalExist ?>曲</p>
     <p style="margin-top:8px">
       <?php if ($isDry): ?>
-        <a href="?file=<?= urlencode($srcFile) ?>" style="display:inline-block;padding:6px 18px;background:var(--blue);color:#fff;border-radius:4px;text-decoration:none;font-weight:700">
+        <a href="?file=<?= urlencode($srcFile) ?>" onclick="showLoading()" style="display:inline-block;padding:6px 18px;background:var(--blue);color:#fff;border-radius:4px;text-decoration:none;font-weight:700">
           このまま実行
         </a>
       <?php endif; ?>
@@ -446,5 +497,55 @@ th { background:#f5f5f5; }
   <?php endforeach; ?>
 <?php endif; ?>
 </div>
+
+<script>
+/* ── ローディングオーバーレイ ── */
+function showLoading() {
+  document.getElementById('loading-overlay').classList.add('show');
+}
+
+/* ── 全アーティスト一括取り込み ── */
+var bulkStop = false;
+var bulkFiles = <?= json_encode(array_keys($specialPages), JSON_UNESCAPED_UNICODE) ?>;
+
+function startBulkImport() {
+  if (!confirm('全<?= count($specialPages) ?>アーティストを順番に取り込みます。\n時間がかかります（アーティスト1名あたり1〜2分）。\n開始してよろしいですか？')) return;
+  bulkStop = false;
+  document.getElementById('bulk-wrap').style.display = 'block';
+  document.querySelector('button[onclick="startBulkImport()"]').disabled = true;
+  runBulk(0, 0, 0, 0);
+}
+
+async function runBulk(idx, totalInserted, totalSkipped, totalNew) {
+  if (bulkStop || idx >= bulkFiles.length) {
+    var msg = bulkStop ? '停止しました。' : '✓ 全件完了！';
+    document.getElementById('bulk-status').textContent =
+      msg + ' 計' + totalInserted + '曲追加 / ' + totalSkipped + '曲スキップ / 新規アーティスト' + totalNew + '名';
+    return;
+  }
+  var file = bulkFiles[idx];
+  document.getElementById('bulk-status').textContent =
+    '(' + (idx+1) + '/' + bulkFiles.length + ') 処理中… ';
+  document.getElementById('bulk-progress').value = idx;
+  try {
+    var res = await fetch('?bulk_json=1&file=' + encodeURIComponent(file));
+    var d = await res.json();
+    var log = document.getElementById('bulk-log');
+    var p = document.createElement('p');
+    p.textContent = (idx+1) + '. ' + d.artist + ' → 追加' + d.inserted + '曲 / スキップ' + d.skipped + '曲' + (d.new_artist ? ' ★新規' : '');
+    log.prepend(p);
+    setTimeout(function() {
+      runBulk(idx+1, totalInserted+d.inserted, totalSkipped+d.skipped, totalNew+(d.new_artist?1:0));
+    }, 800);
+  } catch(e) {
+    var log = document.getElementById('bulk-log');
+    var p = document.createElement('p');
+    p.style.color = '#c00';
+    p.textContent = 'エラー: ' + file + ' — ' + e.message;
+    log.prepend(p);
+    setTimeout(function() { runBulk(idx+1, totalInserted, totalSkipped, totalNew); }, 1000);
+  }
+}
+</script>
 </body>
 </html>
