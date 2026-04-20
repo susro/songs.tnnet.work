@@ -435,6 +435,7 @@ if ($runAddArtist) {
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
             <a href="tools/import_ady_songs.php" target="_blank" class="link-button" style="background:var(--blue);color:#fff;border-color:var(--blue-dark)">インポート画面を開く</a>
+            <a href="tools/import_ady_artist_pages.php" target="_blank" class="link-button" style="background:var(--blue);color:#fff;border-color:var(--blue-dark)">特設アーティストページ</a>
         </div>
     </section>
 
