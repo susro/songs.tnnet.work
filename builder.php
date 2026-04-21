@@ -198,35 +198,23 @@ if ($runAddArtist) {
 }
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>曲を増やす！</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Builder – Songs.TNNET</title>
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-<div class="container">
-    <div class="page-head">
-        <h1>曲を増やす！</h1>
-        <div class="theme-switch">
-            <span>テーマ:</span>
-            <select id="theme-select" class="theme-select">
-                <option value="theme-neon">ネオン</option>
-                <option value="theme-sunset">サンセット</option>
-                <option value="theme-mint">ミント</option>
-                <option value="theme-cream-a">クリームA</option>
-                <option value="theme-cream-b">クリームB</option>
-                <option value="theme-cream-c">クリームC</option>
-            </select>
-        </div>
-    </div>
-    <nav class="top-nav">
-        <a href="index.php">トップ</a>
-        <a href="artists.php">アーティスト一覧</a>
-        <a href="builder.php" class="is-active">曲を増やす！</a>
-        <a href="import_history.php">取り込み履歴</a>
-    </nav>
+<div class="app-shell">
+  <?php $activePage = 'builder'; include '_nav.php'; ?>
+  <div class="main-wrap">
+    <header class="page-header">
+      <span class="page-header-brand">Songs.TNNET</span>
+      <span class="page-title">Builder</span>
+    </header>
+    <div class="page-body">
+<div class="builder-wrap">
 
     <!-- ── 招待コード管理 ── -->
     <section class="panel-card" style="margin-bottom:16px">
@@ -249,7 +237,7 @@ if ($runAddArtist) {
                             <code><?= htmlspecialchars($u['invite_code']) ?></code>
                             <button type="button" class="copy-invite-btn"
                                     data-code="<?= htmlspecialchars($u['invite_code']) ?>"
-                                    style="height:24px;padding:0 8px;font-size:11px;border:1px solid var(--border-dark);border-radius:3px;background:#fff;color:var(--blue);cursor:pointer;white-space:nowrap">
+                                    style="height:24px;padding:0 8px;font-size:11px;border:1px solid var(--border-dark);border-radius:3px;background:var(--surface);color:var(--blue);cursor:pointer;white-space:nowrap">
                                 📋 コピー
                             </button>
                         </div>
@@ -466,7 +454,10 @@ if ($runAddArtist) {
             </div>
         </section>
     <?php endif; ?>
-</div>
+</div><!-- /builder-wrap -->
+    </div><!-- /page-body -->
+  </div><!-- /main-wrap -->
+</div><!-- /app-shell -->
 
 <dialog id="add-artist-dialog" class="add-artist-dialog">
     <form method="post" class="panel-card">
@@ -672,17 +663,6 @@ if (closeFetchResult) {
     fetchResultDialog.close();
   });
 }
-var themeSelect = document.getElementById('theme-select');
-themeSelect.addEventListener('change', function () {
-  var theme = themeSelect.value;
-  document.body.classList.remove('theme-neon', 'theme-sunset', 'theme-mint', 'theme-cream-a', 'theme-cream-b', 'theme-cream-c');
-  document.body.classList.add(theme);
-  localStorage.setItem('songsTheme', theme);
-});
-var savedTheme = localStorage.getItem('songsTheme') || 'theme-neon';
-document.body.classList.remove('theme-neon', 'theme-sunset', 'theme-mint', 'theme-cream-a', 'theme-cream-b', 'theme-cream-c');
-document.body.classList.add(savedTheme);
-themeSelect.value = savedTheme;
 syncCardState();
 syncSelectedInputs();
 document.getElementById('loading-overlay').hidden = true;

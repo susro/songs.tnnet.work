@@ -100,6 +100,7 @@ if (!$detail) {
     </header>
 
     <div class="page-body">
+    <div class="sl-wrap">
 
     <?php if ($detail): ?>
       <!-- ── リスト詳細 ── -->
@@ -236,6 +237,7 @@ if (!$detail) {
 
     <?php endif; ?>
 
+    </div><!-- /sl-wrap -->
     </div><!-- /page-body -->
   </div><!-- /main-wrap -->
 </div><!-- /app-shell -->

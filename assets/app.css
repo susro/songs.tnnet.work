@@ -1551,6 +1551,9 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 
   .action-grid  { grid-template-columns: repeat(3, 1fr); }
   .home-grid    { grid-template-columns: 1.1fr 0.9fr; }
+
+  /* songlists / builder: constrain content width on desktop */
+  .sl-wrap, .builder-wrap { max-width: 820px; margin: 0 auto; }
 }
 
 /* Large desktop */
