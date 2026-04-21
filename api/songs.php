@@ -54,7 +54,7 @@ $cntStmt->execute($params);
 $total = (int)$cntStmt->fetchColumn();
 
 $dataStmt = $pdo->prepare(
-    "SELECT DISTINCT s.id, s.title, s.release_year, s.youtube_url, s.dam_number,
+    "SELECT DISTINCT s.id, s.title, s.release_year, s.youtube_url, s.dam_number, s.joysound_number,
             a.id AS artist_id, a.name AS artist_name
      $from $wc ORDER BY s.release_year DESC, s.id DESC LIMIT $per OFFSET $off"
 );

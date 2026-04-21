@@ -433,7 +433,7 @@ button { cursor: pointer; font-family: inherit; }
 .page-header {
   flex-shrink: 0;
   height: var(--bar-h);
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 0 20px;
   display: flex;
@@ -480,7 +480,7 @@ button { cursor: pointer; font-family: inherit; }
   position: fixed;
   bottom: 0; left: 0; right: 0;
   height: var(--nav-h);
-  background: #fff;
+  background: var(--surface);
   border-top: 1px solid var(--border);
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom, 0);
@@ -529,7 +529,7 @@ button { cursor: pointer; font-family: inherit; }
 .active-list-card.has-list:hover { box-shadow: 0 6px 22px rgba(0,85,200,0.40); }
 
 .active-list-card.no-list {
-  background: #fff;
+  background: var(--surface);
   border: 2px dashed var(--border-dark);
   color: var(--text-muted);
 }
@@ -549,7 +549,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 
 .action-tile {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 18px 12px 16px;
@@ -593,7 +593,7 @@ button { cursor: pointer; font-family: inherit; }
 /* Stats bar */
 .stats-bar {
   display: flex;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   margin-bottom: 22px;
@@ -615,7 +615,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 
 /* Recent list */
-.recent-list { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.recent-list { background: var(--surface); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
 .recent-item {
   display: flex;
   align-items: center;
@@ -637,7 +637,7 @@ button { cursor: pointer; font-family: inherit; }
 /* Search bar */
 .search-bar {
   flex-shrink: 0;
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 10px 16px 8px;
 }
@@ -658,7 +658,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 .search-input:focus {
   border-color: var(--blue);
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 0 0 3px rgba(0,85,200,0.11);
 }
 
@@ -686,7 +686,7 @@ button { cursor: pointer; font-family: inherit; }
   height: 28px; padding: 0 13px;
   border: 1px solid var(--border-dark);
   border-radius: 14px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text-sub);
   font-size: 12px; white-space: nowrap;
   cursor: pointer;
@@ -725,13 +725,13 @@ button { cursor: pointer; font-family: inherit; }
   display: flex;
   align-items: center;
   padding: 10px 14px;
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   gap: 10px;
   min-height: 58px;
   transition: background 0.08s;
 }
-.song-card:hover { background: #f5f8ff; }
+.song-card:hover { background: var(--blue-light); }
 
 .song-card-num  { font-size: 11px; color: var(--text-muted); width: 26px; text-align: right; flex-shrink: 0; }
 .song-card-body { flex: 1; min-width: 0; }
@@ -773,7 +773,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 .paging button {
   border: 1px solid var(--border-dark); border-radius: 5px;
-  background: #fff; color: var(--blue);
+  background: var(--surface); color: var(--blue);
   padding: 7px 16px; font-size: 13px; font-weight: 600;
 }
 .paging button:hover { background: var(--blue-light); }
@@ -782,7 +782,7 @@ button { cursor: pointer; font-family: inherit; }
    SONGLISTS  (songlists.php)
    ═══════════════════════════════════════════════ */
 
-.list-card-wrap { margin-bottom: 20px; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.list-card-wrap { margin-bottom: 20px; background: var(--surface); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
 
 .list-card {
   display: flex; align-items: center;
@@ -802,7 +802,7 @@ button { cursor: pointer; font-family: inherit; }
 .list-card-arrow { font-size: 20px; color: var(--border-dark); flex-shrink: 0; }
 
 .detail-header-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 16px 18px;
@@ -818,7 +818,7 @@ button { cursor: pointer; font-family: inherit; }
 .set-active-btn {
   flex-shrink: 0;
   height: 34px; padding: 0 14px;
-  background: #fff; color: var(--blue);
+  background: var(--surface); color: var(--blue);
   border: 1.5px solid var(--blue); border-radius: 6px;
   font-size: 12px; font-weight: 700; white-space: nowrap;
 }
@@ -842,7 +842,7 @@ button { cursor: pointer; font-family: inherit; }
   flex-shrink: 0;
   width: 32px; height: 32px;
   border-radius: 50%; border: 1px solid var(--border);
-  background: #fff; color: var(--text-muted);
+  background: var(--surface); color: var(--text-muted);
   font-size: 12px;
   display: flex; align-items: center; justify-content: center;
 }
@@ -855,7 +855,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 .btn-danger {
   height: 36px; padding: 0 16px;
-  background: #fff; color: var(--red);
+  background: var(--surface); color: var(--red);
   border: 1px solid var(--red); border-radius: 5px;
   font-size: 13px;
 }
@@ -872,11 +872,11 @@ button { cursor: pointer; font-family: inherit; }
 .btn-primary:hover { background: var(--blue-dark); }
 .btn-secondary {
   height: 38px; padding: 0 16px;
-  background: #fff; color: var(--blue);
+  background: var(--surface); color: var(--blue);
   border: 1px solid var(--border-dark); border-radius: 6px; font-size: 13px;
 }
 .new-list-form {
-  background: #fff; border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 14px 16px;
   margin-bottom: 14px;
 }
@@ -898,7 +898,7 @@ button { cursor: pointer; font-family: inherit; }
 .list-picker-dialog::backdrop { background: rgba(0,0,0,0.55); }
 
 .dialog-card {
-  background: #fff; border-radius: 14px;
+  background: var(--surface); border-radius: 14px;
   overflow: hidden; display: flex; flex-direction: column;
   box-shadow: 0 12px 40px rgba(0,0,0,0.2);
 }
@@ -908,7 +908,7 @@ button { cursor: pointer; font-family: inherit; }
 .picker-item {
   display: flex; width: 100%; align-items: center; justify-content: space-between;
   padding: 14px 18px; border: none; border-bottom: 1px solid var(--border);
-  background: #fff; text-align: left; gap: 10px; cursor: pointer;
+  background: var(--surface); text-align: left; gap: 10px; cursor: pointer;
 }
 .picker-item:hover { background: var(--blue-light); }
 .picker-name  { flex: 1; font-size: 14px; font-weight: 700; }
@@ -928,7 +928,7 @@ button { cursor: pointer; font-family: inherit; }
 
 .dialog-cancel {
   width: 100%; padding: 13px; border: none;
-  border-top: 1px solid var(--border); background: #fff;
+  border-top: 1px solid var(--border); background: var(--surface);
   color: var(--text-sub); font-size: 14px;
 }
 .dialog-cancel:hover { background: var(--bg); }
@@ -978,7 +978,7 @@ button { cursor: pointer; font-family: inherit; }
   background: var(--blue-light);
   border-color: var(--blue);
 }
-.artist-filter-tab.tag-jpop.is-active   { color: #b84000; background: #fff0e6; border-color: #f5b07a; }
+.artist-filter-tab.tag-jpop.is-active   { color: #b84000; background: var(--surface)0e6; border-color: #f5b07a; }
 .artist-filter-tab.tag-western.is-active { color: #1555a0; background: #e6f0ff; border-color: #7aaaf5; }
 
 /* 50音ジャンプバー */
@@ -1030,7 +1030,7 @@ button { cursor: pointer; font-family: inherit; }
   display: flex;
   align-items: center;
   padding: 13px 16px;
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   gap: 13px;
   text-decoration: none;
@@ -1092,7 +1092,7 @@ button { cursor: pointer; font-family: inherit; }
   padding: 1px 6px;
   white-space: nowrap;
 }
-.artist-tag-chip[data-tag="邦楽"] { color: #b84000; background: #fff0e6; border-color: #f5b07a; }
+.artist-tag-chip[data-tag="邦楽"] { color: #b84000; background: var(--surface)0e6; border-color: #f5b07a; }
 .artist-tag-chip[data-tag="洋楽"] { color: #1555a0; background: #e6f0ff; border-color: #7aaaf5; }
 
 .artist-card-arrow {
@@ -1164,7 +1164,7 @@ button { cursor: pointer; font-family: inherit; }
   display: flex; flex-wrap: wrap;
   border-bottom: 2px solid var(--blue);
   margin: 0 -16px 16px; padding: 8px 16px 0;
-  background: #fff; border-top: 1px solid var(--border);
+  background: var(--surface); border-top: 1px solid var(--border);
 }
 .top-nav a {
   display: inline-block; color: var(--blue);
@@ -1173,20 +1173,20 @@ button { cursor: pointer; font-family: inherit; }
   margin-right: 3px; margin-bottom: -2px;
 }
 .top-nav a:hover      { background: var(--blue-light); text-decoration: none; }
-.top-nav a.is-active  { background: #fff; font-weight: 700; border-bottom: 2px solid #fff; }
+.top-nav a.is-active  { background: var(--surface); font-weight: 700; border-bottom: 2px solid #fff; }
 
 .search-form         { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .search-form label   { display: inline-flex; gap: 5px; align-items: center; font-size: 13px; }
-.search-form input   { height: 30px; border: 1px solid var(--border-dark); border-radius: 3px; padding: 0 8px; background: #fff; color: var(--text); font-size: 13px; outline: none; }
+.search-form input   { height: 30px; border: 1px solid var(--border-dark); border-radius: 3px; padding: 0 8px; background: var(--surface); color: var(--text); font-size: 13px; outline: none; }
 .search-form input:focus { border-color: var(--blue); }
 .search-form button  { height: 30px; border: 1px solid var(--blue-dark); border-radius: 3px; padding: 0 14px; background: var(--blue); color: #fff; font-size: 13px; font-weight: 700; }
-.link-button         { display: inline-block; height: 30px; line-height: 28px; border: 1px solid var(--border-dark); border-radius: 3px; padding: 0 12px; background: #fff; color: var(--blue); font-size: 13px; }
+.link-button         { display: inline-block; height: 30px; line-height: 28px; border: 1px solid var(--border-dark); border-radius: 3px; padding: 0 12px; background: var(--surface); color: var(--blue); font-size: 13px; }
 .link-button:hover   { background: var(--bg); text-decoration: none; }
 
 h1 { font-size: 1.25rem; margin: 0 0 10px; font-weight: 800; }
 h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px; border-bottom: 1px solid var(--border); color: var(--blue-dark); }
 
-.data-table          { width: 100%; min-width: 640px; border-collapse: collapse; background: #fff; font-size: 13px; }
+.data-table          { width: 100%; min-width: 640px; border-collapse: collapse; background: var(--surface); font-size: 13px; }
 .data-table th,
 .data-table td       { border: 1px solid var(--border); padding: 7px 10px; text-align: left; }
 .data-table thead th { background: #dce6f4; color: var(--blue-dark); font-weight: 700; font-size: 12px; }
@@ -1202,21 +1202,21 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; }
 .artist-list  { margin: 0; padding-left: 20px; font-size: 13px; }
 .artist-list li { margin: 7px 0; }
-.panel-card   { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px; }
+.panel-card   { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px; }
 .panel-note   { margin: 10px 0 5px; color: var(--text-sub); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .home-grid    { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
 .feature-tiles { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
-.feature-tile { border: 1px solid var(--border); border-radius: 6px; background: #fff; padding: 12px 14px; text-decoration: none; color: var(--text); min-height: 68px; display: flex; flex-direction: column; justify-content: center; }
+.feature-tile { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 12px 14px; text-decoration: none; color: var(--text); min-height: 68px; display: flex; flex-direction: column; justify-content: center; }
 .feature-tile strong { display: block; margin-bottom: 3px; font-size: 13px; color: var(--blue-dark); }
 .feature-tile span   { color: var(--text-sub); font-size: 12px; }
 .feature-tile-placeholder { opacity: 0.65; border-style: dashed; }
 .quick-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .action-chip  { color: var(--blue-dark); }
-.jelly-chip   { border-radius: 4px; padding: 4px 9px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+.jelly-chip   { border-radius: 4px; padding: 4px 9px; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,0.08); border: 1px solid var(--border); }
 
-.admin-list   { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 6px; background: #fff; }
+.admin-list   { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 6px; background: var(--surface); }
 .admin-matrix { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 8px; }
-.admin-card   { display: flex; align-items: flex-start; gap: 8px; border: 1px solid var(--border); border-radius: 4px; padding: 10px; background: #fff; cursor: pointer; }
+.admin-card   { display: flex; align-items: flex-start; gap: 8px; border: 1px solid var(--border); border-radius: 4px; padding: 10px; background: var(--surface); cursor: pointer; }
 .admin-card.is-selected { border-color: var(--blue); background: var(--blue-light); box-shadow: 0 0 0 2px rgba(0,85,200,0.18); }
 .admin-card-body  { display: flex; flex-direction: column; gap: 3px; }
 .admin-card small { color: var(--text-sub); display: block; }
@@ -1224,9 +1224,9 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 .admin-item:last-child { border-bottom: none; }
 .admin-item small { display: block; color: var(--text-sub); }
 .select-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
-.select-tools button { border: 1px solid var(--border-dark); border-radius: 3px; background: #fff; color: var(--blue); padding: 5px 10px; cursor: pointer; }
+.select-tools button { border: 1px solid var(--border-dark); border-radius: 3px; background: var(--surface); color: var(--blue); padding: 5px 10px; cursor: pointer; }
 .admin-side-tools { margin: 8px 0 12px; margin-left: auto; }
-.admin-side-tools button { border: 1px solid var(--border-dark); border-radius: 3px; background: #fff; color: var(--blue); padding: 7px 12px; cursor: pointer; }
+.admin-side-tools button { border: 1px solid var(--border-dark); border-radius: 3px; background: var(--surface); color: var(--blue); padding: 7px 12px; cursor: pointer; }
 .fetch-badge         { font-size: 11px; border: 1px solid var(--green); color: var(--green); border-radius: 2px; padding: 1px 6px; }
 .fetch-badge-pending { border-color: var(--orange); color: var(--orange); white-space: nowrap; }
 .meta-row    { display: flex; gap: 12px; align-items: center; }
@@ -1238,10 +1238,10 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 .add-artist-dialog::backdrop { background: rgba(0,0,0,0.45); }
 .add-artist-dialog .panel-card { margin: 0; }
 .add-artist-dialog label { display: block; margin-bottom: 10px; font-size: 13px; }
-.add-artist-dialog input[type="text"] { width: 100%; box-sizing: border-box; height: 30px; border: 1px solid var(--border-dark); border-radius: 3px; padding: 0 8px; font-size: 13px; background: #fff; color: var(--text); }
+.add-artist-dialog input[type="text"] { width: 100%; box-sizing: border-box; height: 30px; border: 1px solid var(--border-dark); border-radius: 3px; padding: 0 8px; font-size: 13px; background: var(--surface); color: var(--text); }
 .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 1200; }
 .loading-overlay[hidden] { display: none !important; }
-.loading-box { background: #fff; border-radius: 6px; border: 1px solid var(--border); padding: 22px 30px; min-width: 220px; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,0.16); }
+.loading-box { background: var(--surface); border-radius: 6px; border: 1px solid var(--border); padding: 22px 30px; min-width: 220px; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,0.16); }
 .spinner { width: 26px; height: 26px; border-radius: 50%; margin: 0 auto 10px; border: 3px solid var(--border); border-top-color: var(--blue); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .tag-filter { cursor: pointer; font-size: 12px; color: var(--blue-dark); }
@@ -1397,7 +1397,7 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 .sd-lyrics { font-size: 15px; color: var(--text); line-height: 1.6; padding: 4px 0; }
 .sd-chord-badge { display: inline-block; padding: 3px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; margin-right: 12px; }
 .sd-chord-A { background: #d4edda; color: #155724; }
-.sd-chord-B { background: #fff3cd; color: #856404; }
+.sd-chord-B { background: var(--surface)3cd; color: #856404; }
 .sd-chord-C { background: #f8d7da; color: #721c24; }
 .sd-chord-link { font-size: 13px; color: var(--blue); text-decoration: none; }
 .sd-chord-link:hover { text-decoration: underline; }
@@ -1458,7 +1458,7 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
   gap: 8px;
   font-size: 13px;
   color: var(--text-sub);
-  background: #fff8e6;
+  background: var(--surface)8e6;
   border-left: 3px solid #e8a000;
   padding: 8px 12px;
   margin-bottom: 12px;
@@ -1512,6 +1512,27 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
 /* songs.php: カード本体をリンク化 */
 .song-card-body { text-decoration: none; color: inherit; display: block; flex: 1; min-width: 0; }
 .song-card-body:hover .song-title { color: var(--blue); }
+
+/* ── Desktop songs table (songs.php) ── */
+.songs-desk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.songs-desk-table thead th {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--header); color: var(--sub);
+  font-weight: 700; text-align: left;
+  padding: 8px 12px; border-bottom: 2px solid var(--border);
+  font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.songs-desk-table tbody tr:nth-child(even) { background: var(--surface-2); }
+.songs-desk-table tbody tr:hover { background: var(--blue-light); }
+.songs-desk-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.songs-desk-title { font-weight: 600; color: var(--text); text-decoration: none; }
+.songs-desk-title:hover { color: var(--blue); }
+.songs-desk-num-cell { color: var(--text-muted); font-size: 12px; width: 40px; text-align: right; }
+.songs-desk-year-cell { color: var(--text-sub); font-size: 12px; white-space: nowrap; }
+.songs-desk-dam-cell { font-family: var(--font-mono); font-size: 11px; color: var(--accent-2); white-space: nowrap; }
+.songs-desk-add { width: 44px; text-align: center; }
+.songs-desk-table .add-btn { width: 32px; height: 32px; font-size: 18px; }
 
 /* Tablet+ / Desktop */
 @media (min-width: 768px) {

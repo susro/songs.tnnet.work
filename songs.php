@@ -185,29 +185,53 @@ function renderSongs(data) {
   }
 
   const offset = (data.page - 1) * 50;
-  el.innerHTML = data.songs.map((s, i) => {
-    const added = isAdded(s.id);
-    const metaParts = [];
-    if (!state.artistId && s.artist_name) {
-      metaParts.push(`<a class="song-artist-link" href="artists.php?focus=${s.artist_id}">${esc(s.artist_name)}</a>`);
-    }
-    if (s.release_year) metaParts.push(esc(s.release_year));
-    if (s.dam_number)   metaParts.push(`<span class="dam-num">DAM●${esc(s.dam_number)}</span>`);
-    const meta = metaParts.join(' · ');
+  const isDesktop = window.innerWidth >= 768;
 
-    const ytBtn = s.youtube_url
-      ? `<a class="yt-btn" href="${esc(s.youtube_url)}" target="_blank" rel="noopener" aria-label="試聴">▶</a>`
-      : '';
-    return `<div class="song-card">
-      <span class="song-card-num">${offset + i + 1}</span>
-      <a class="song-card-body" href="song_detail.php?id=${s.id}">
-        <div class="song-title">${esc(s.title)}</div>
-        <div class="song-meta">${meta || '—'}</div>
-      </a>
-      ${ytBtn}
-      <button class="add-btn${added ? ' is-added' : ''}" data-id="${s.id}" aria-label="リストに追加">${added ? '✓' : '＋'}</button>
-    </div>`;
-  }).join('');
+  if (isDesktop) {
+    el.innerHTML = `<table class="songs-desk-table"><thead><tr>
+      <th class="songs-desk-num-cell">#</th>
+      <th>曲名</th>
+      <th>アーティスト</th>
+      <th class="songs-desk-year-cell">年</th>
+      <th>DAM</th>
+      <th>JOY</th>
+      <th class="songs-desk-add"></th>
+    </tr></thead><tbody>` + data.songs.map((s, i) => {
+      const added = isAdded(s.id);
+      return `<tr>
+        <td class="songs-desk-num-cell">${offset + i + 1}</td>
+        <td><a class="songs-desk-title" href="song_detail.php?id=${s.id}">${esc(s.title)}</a></td>
+        <td>${s.artist_name ? `<a class="song-artist-link" href="artists.php?focus=${s.artist_id}">${esc(s.artist_name)}</a>` : ''}</td>
+        <td class="songs-desk-year-cell">${esc(s.release_year || '')}</td>
+        <td class="songs-desk-dam-cell">${s.dam_number ? esc(s.dam_number) : ''}</td>
+        <td class="songs-desk-dam-cell">${s.joysound_number ? esc(s.joysound_number) : ''}</td>
+        <td class="songs-desk-add"><button class="add-btn${added ? ' is-added' : ''}" data-id="${s.id}" aria-label="リストに追加">${added ? '✓' : '＋'}</button></td>
+      </tr>`;
+    }).join('') + `</tbody></table>`;
+  } else {
+    el.innerHTML = data.songs.map((s, i) => {
+      const added = isAdded(s.id);
+      const metaParts = [];
+      if (!state.artistId && s.artist_name) {
+        metaParts.push(`<a class="song-artist-link" href="artists.php?focus=${s.artist_id}">${esc(s.artist_name)}</a>`);
+      }
+      if (s.release_year) metaParts.push(esc(s.release_year));
+      if (s.dam_number)   metaParts.push(`<span class="dam-num">DAM●${esc(s.dam_number)}</span>`);
+      const meta = metaParts.join(' · ');
+      const ytBtn = s.youtube_url
+        ? `<a class="yt-btn" href="${esc(s.youtube_url)}" target="_blank" rel="noopener" aria-label="試聴">▶</a>`
+        : '';
+      return `<div class="song-card">
+        <span class="song-card-num">${offset + i + 1}</span>
+        <a class="song-card-body" href="song_detail.php?id=${s.id}">
+          <div class="song-title">${esc(s.title)}</div>
+          <div class="song-meta">${meta || '—'}</div>
+        </a>
+        ${ytBtn}
+        <button class="add-btn${added ? ' is-added' : ''}" data-id="${s.id}" aria-label="リストに追加">${added ? '✓' : '＋'}</button>
+      </div>`;
+    }).join('');
+  }
 
   /* ページング */
   const pg = document.getElementById('pagination');
