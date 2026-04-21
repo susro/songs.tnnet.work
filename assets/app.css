@@ -176,6 +176,90 @@ html[data-density="roomy"] {
   border-bottom-color: var(--white);
 }
 
+/* ════════════════════════════════════════════
+   DESK HOME  –  2カラムダッシュボード (desktop)
+   ════════════════════════════════════════════ */
+
+.desk-home { display: none; }
+.mob-home  { display: block; }
+
+.desk-home-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+/* Card */
+.dh-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.dh-card-head {
+  padding: 7px 14px;
+  background: var(--header);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+}
+.dh-card-body { padding: 14px 16px; }
+
+/* Table */
+.dh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dh-table thead tr { background: var(--header); }
+.dh-table th { text-align: left; padding: 7px 10px; font-weight: 700; color: var(--blue-dark); border-bottom: 1px solid var(--border); }
+.dh-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.dh-table tbody tr:nth-child(even) { background: var(--surface-2); }
+.dh-table tbody tr:hover           { background: var(--blue-light); }
+.dh-table tbody tr:last-child td   { border-bottom: none; }
+
+/* Stat tile */
+.dh-stat-tile {
+  padding: 11px 13px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  border-left: 3px solid var(--accent);
+}
+.dh-stat-num   { font-size: 20px; font-weight: 800; color: var(--blue-dark); font-variant-numeric: tabular-nums; }
+.dh-stat-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+/* Quick action button */
+.dh-quick-btn {
+  padding: 9px 11px;
+  border: 1px solid var(--border-dark);
+  background: var(--white);
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-dark);
+  text-align: left;
+  text-decoration: none;
+  display: block;
+  transition: background 0.1s;
+}
+.dh-quick-btn:hover { background: var(--blue-light); text-decoration: none; }
+
+/* Primary button (active list) */
+.dh-btn-primary {
+  padding: 7px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dh-btn-primary:hover { background: var(--blue-dark); text-decoration: none; }
+
 /* ── Section label ── */
 .sect {
   font-size: 10px;
@@ -1439,6 +1523,10 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; padding-bottom: 6px
   .main-wrap    { padding-bottom: 0; }
   /* tabs show which page we're on — page-header is redundant on desktop */
   .page-header  { display: none; }
+
+  /* home: show desk layout, hide mobile layout */
+  .desk-home    { display: block; }
+  .mob-home     { display: none; }
 
   .action-grid  { grid-template-columns: repeat(3, 1fr); }
   .home-grid    { grid-template-columns: 1.1fr 0.9fr; }
