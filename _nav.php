@@ -21,6 +21,26 @@ function icon(string $name): string {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
 }
 ?>
+<!-- PC topbar + aoiro-tabs (desktop only, hidden on mobile) -->
+<div class="pc-header">
+  <div class="topbar">
+    <?= icon('music') ?>&nbsp;Songs.TNNET
+    <div class="topbar-user">
+      <?php $__u = current_user(); if ($__u): ?>
+      <span><?= htmlspecialchars($__u['name']) ?> さん</span>
+      <a href="logout.php">ログアウト</a>
+      <?php endif; ?>
+    </div>
+  </div>
+  <nav class="aoiro-tabs">
+    <a href="index.php"     class="aoiro-tab<?= _nav_cls('home',    $_active) ?>">ホーム</a>
+    <a href="songs.php"     class="aoiro-tab<?= _nav_cls('songs',   $_active) ?>">曲を探す</a>
+    <a href="artists.php"   class="aoiro-tab<?= _nav_cls('artists', $_active) ?>">アーティスト</a>
+    <a href="songlists.php" class="aoiro-tab<?= _nav_cls('lists',   $_active) ?>">ソングリスト</a>
+    <a href="builder.php"   class="aoiro-tab<?= _nav_cls('builder', $_active) ?>">Builder</a>
+  </nav>
+</div>
+
 <aside class="sidebar">
   <div class="sidebar-brand">
     <span class="sidebar-logo"><?= icon('music') ?></span>Songs.TNNET
@@ -33,7 +53,7 @@ function icon(string $name): string {
     <hr class="sidebar-divider">
   </nav>
   <div class="sidebar-footer">
-    <?php if (!empty($_active) || true): $__u = current_user(); ?>
+    <?php if (!empty($_active) || true): if (!isset($__u)) $__u = current_user(); ?>
     <?php if ($__u): ?>
     <div class="sidebar-user">
       <span class="sidebar-user-name"><?= htmlspecialchars($__u['name']) ?></span>
@@ -52,3 +72,73 @@ function icon(string $name): string {
   <a href="songlists.php" class="bottom-nav-item<?= _nav_cls('lists',   $_active) ?>"><?= icon('list')   ?><span class="nav-label">リスト</span></a>
   <a href="logout.php"    class="bottom-nav-item" onclick="return confirm('ログアウトしますか？')"><?= icon('logout') ?><span class="nav-label">ログアウト</span></a>
 </nav>
+
+<!-- ── Theme + Density Switcher ── -->
+<details class="theme-switcher" id="theme-switcher">
+  <summary>⚙ テーマ</summary>
+  <div class="theme-switcher-body">
+    <div class="theme-switcher-row">
+      <span class="theme-switcher-label">テーマ</span>
+      <div class="theme-switcher-opts" id="ts-themes">
+        <button data-theme="B-biz">Biz</button>
+        <button data-theme="A-dark">A-dark</button>
+        <button data-theme="A-light">A-light</button>
+        <button data-theme="C-light">C-light</button>
+        <button data-theme="C-dark">C-dark</button>
+      </div>
+    </div>
+    <div class="theme-switcher-row">
+      <span class="theme-switcher-label">密度</span>
+      <div class="theme-switcher-opts" id="ts-density">
+        <button data-density="compact">コンパクト</button>
+        <button data-density="cozy">標準</button>
+        <button data-density="roomy">ゆったり</button>
+      </div>
+    </div>
+  </div>
+</details>
+
+<script>
+(function () {
+  var LS = 'songs-tnnet-ui';
+  function load() {
+    try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch(e) { return {}; }
+  }
+  function save(obj) {
+    try { localStorage.setItem(LS, JSON.stringify(obj)); } catch(e) {}
+  }
+  function apply(prefs) {
+    if (prefs.theme)   document.documentElement.dataset.theme   = prefs.theme;
+    if (prefs.density) document.documentElement.dataset.density = prefs.density;
+  }
+
+  var prefs = load();
+  if (!prefs.theme)   prefs.theme   = 'B-biz';
+  if (!prefs.density) prefs.density = 'cozy';
+  apply(prefs);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    function markActive() {
+      document.querySelectorAll('#ts-themes button').forEach(function (b) {
+        b.classList.toggle('ts-on', b.dataset.theme === document.documentElement.dataset.theme);
+      });
+      document.querySelectorAll('#ts-density button').forEach(function (b) {
+        b.classList.toggle('ts-on', b.dataset.density === document.documentElement.dataset.density);
+      });
+    }
+    document.querySelectorAll('#ts-themes button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        prefs.theme = b.dataset.theme;
+        apply(prefs); save(prefs); markActive();
+      });
+    });
+    document.querySelectorAll('#ts-density button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        prefs.density = b.dataset.density;
+        apply(prefs); save(prefs); markActive();
+      });
+    });
+    markActive();
+  });
+})();
+</script>

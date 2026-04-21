@@ -70,16 +70,26 @@ $backUrl = in_array($back, ['songs', 'artist']) ? ($back === 'artist' && $song['
         <div class="sd-karaoke-nums">
           <?php if ($song['dam_number']): ?>
             <button class="sd-num-card" onclick="copyNum('<?= htmlspecialchars($song['dam_number']) ?>', this)">
-              <span class="sd-num-service">DAM</span>
-              <span class="sd-num-value"><?= htmlspecialchars($song['dam_number']) ?></span>
-              <span class="sd-num-copy-hint">タップでコピー</span>
+              <div class="sd-num-card-left">
+                <span class="sd-num-service">DAM</span>
+                <span class="sd-num-value"><?= htmlspecialchars($song['dam_number']) ?></span>
+                <span class="sd-num-copy-hint">タップでコピー</span>
+              </div>
+              <div class="sd-num-copy-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </div>
             </button>
           <?php endif; ?>
           <?php if ($song['joysound_number']): ?>
-            <button class="sd-num-card" onclick="copyNum('<?= htmlspecialchars($song['joysound_number']) ?>', this)">
-              <span class="sd-num-service">JOYSOUND</span>
-              <span class="sd-num-value"><?= htmlspecialchars($song['joysound_number']) ?></span>
-              <span class="sd-num-copy-hint">タップでコピー</span>
+            <button class="sd-num-card is-joy" onclick="copyNum('<?= htmlspecialchars($song['joysound_number']) ?>', this)">
+              <div class="sd-num-card-left">
+                <span class="sd-num-service">JOYSOUND</span>
+                <span class="sd-num-value"><?= htmlspecialchars($song['joysound_number']) ?></span>
+                <span class="sd-num-copy-hint">タップでコピー</span>
+              </div>
+              <div class="sd-num-copy-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </div>
             </button>
           <?php endif; ?>
         </div>
